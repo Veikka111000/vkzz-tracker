@@ -72,19 +72,6 @@
   }
   select:focus { border-color: var(--accent); }
 
-  .reset-btn {
-    align-self: flex-end;
-    padding: 7px 16px;
-    background: transparent;
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    color: var(--muted);
-    font-size: 0.82rem;
-    cursor: pointer;
-    transition: all .15s;
-  }
-  .reset-btn:hover { border-color: var(--accent); color: var(--text); }
-
   /* Stats cards */
   .stats-grid {
     display: grid;
@@ -116,17 +103,14 @@
   .chart-wrap h2 { font-size: 0.9rem; font-weight: 600; color: var(--muted); margin-bottom: 16px; text-transform: uppercase; letter-spacing: 0.06em; }
   .chart-wrap canvas { max-height: 240px; }
 
-  /* Empty state */
   .empty { text-align: center; color: var(--muted); padding: 48px; }
-
-  footer { text-align: center; color: var(--muted); font-size: 0.78rem; padding: 24px; border-top: 1px solid var(--border); margin-top: 12px; }
 </style>
 </head>
 <body>
 
 <header>
   <h1>Betting Tracker</h1>
-  <p>Aggregated performance statistics · units (1u = 100€)</p>
+  <p>Performance statistics · units (1u = 100€)</p>
 </header>
 
 <div class="container">
@@ -143,7 +127,6 @@
         <option value="all">Kaikki</option>
       </select>
     </div>
-    <button class="reset-btn" onclick="resetFilters()">Nollaa</button>
   </div>
 
   <!-- Stats -->
@@ -180,17 +163,14 @@
 
 </div>
 
-<footer>Vain aggregaattitilastoja · Ei yksittäisiä vetoja · Ei henkilötietoja</footer>
-
 <script>
 let ALL_BETS = [];
 let ALL_SPORTS = [];
 let ALL_MONTHS = [];
 let chart = null;
 
-// Active filters
-let activeSports = new Set();
-let activeMonth  = 'all';
+let activeSport = 'all';
+let activeMonth = 'all';
 
 fetch('data.json')
   .then(r => r.json())
@@ -202,20 +182,28 @@ fetch('data.json')
   })
   .catch(() => {
     document.querySelector('.container').innerHTML =
-      '<div class="empty">data.json ei löydy. Aja build_data.py ensin.</div>';
+      '<div class="empty">data.json ei löydy.</div>';
   });
 
 function init() {
-  // Sport chips
   const chips = document.getElementById('sportChips');
+
+  // "Kaikki" chip
+  const all = document.createElement('span');
+  all.className = 'chip active';
+  all.textContent = 'Kaikki';
+  all.dataset.sport = 'all';
+  all.onclick = () => selectSport('all');
+  chips.appendChild(all);
+
+  // Per-sport chips
   ALL_SPORTS.forEach(s => {
     const el = document.createElement('span');
-    el.className = 'chip active';
+    el.className = 'chip';
     el.textContent = s;
     el.dataset.sport = s;
-    el.onclick = () => toggleSport(s, el);
+    el.onclick = () => selectSport(s);
     chips.appendChild(el);
-    activeSports.add(s);
   });
 
   // Month select
@@ -224,9 +212,9 @@ function init() {
     const opt = document.createElement('option');
     opt.value = ym;
     const [y, m] = ym.split('-');
-    const monthNames = ['','Tammikuu','Helmikuu','Maaliskuu','Huhtikuu','Toukokuu','Kesäkuu',
-                        'Heinäkuu','Elokuu','Syyskuu','Lokakuu','Marraskuu','Joulukuu'];
-    opt.textContent = `${y} ${monthNames[parseInt(m)]}`;
+    const mn = ['','Tammikuu','Helmikuu','Maaliskuu','Huhtikuu','Toukokuu','Kesäkuu',
+                 'Heinäkuu','Elokuu','Syyskuu','Lokakuu','Marraskuu','Joulukuu'];
+    opt.textContent = `${y} ${mn[parseInt(m)]}`;
     sel.appendChild(opt);
   });
   sel.onchange = () => { activeMonth = sel.value; update(); };
@@ -234,28 +222,17 @@ function init() {
   update();
 }
 
-function toggleSport(sport, el) {
-  if (activeSports.has(sport)) {
-    activeSports.delete(sport);
-    el.classList.remove('active');
-  } else {
-    activeSports.add(sport);
-    el.classList.add('active');
-  }
-  update();
-}
-
-function resetFilters() {
-  activeSports = new Set(ALL_SPORTS);
-  document.querySelectorAll('.chip').forEach(c => c.classList.add('active'));
-  activeMonth = 'all';
-  document.getElementById('monthSelect').value = 'all';
+function selectSport(sport) {
+  activeSport = sport;
+  document.querySelectorAll('.chip').forEach(c => {
+    c.classList.toggle('active', c.dataset.sport === sport);
+  });
   update();
 }
 
 function filtered() {
   return ALL_BETS.filter(b =>
-    activeSports.has(b.sport) &&
+    (activeSport === 'all' || b.sport === activeSport) &&
     (activeMonth === 'all' || b.ym === activeMonth)
   );
 }
@@ -268,13 +245,14 @@ function update() {
   const bets = filtered();
 
   if (bets.length === 0) {
-    document.getElementById('statCount').textContent  = '0';
-    document.getElementById('statROI').textContent    = '—';
-    document.getElementById('statROI').className      = 'value neu';
-    document.getElementById('statPL').textContent     = '—';
-    document.getElementById('statPL').className       = 'value neu';
-    document.getElementById('statOdds').textContent   = '—';
-    document.getElementById('statRecord').textContent = '—';
+    document.getElementById('statCount').textContent     = '0';
+    document.getElementById('statROI').textContent      = '—';
+    document.getElementById('statROI').className        = 'value neu';
+    document.getElementById('statPL').textContent       = '—';
+    document.getElementById('statPL').className         = 'value neu';
+    document.getElementById('statOdds').textContent     = '—';
+    document.getElementById('statOddsMed').textContent  = '';
+    document.getElementById('statRecord').textContent   = '—';
     document.getElementById('statRecordSub').textContent = '';
     updateChart([]);
     return;
@@ -284,10 +262,12 @@ function update() {
   const totalStake = bets.reduce((s, b) => s + b.stake, 0);
   const roi        = totalStake > 0 ? (totalPL / totalStake) * 100 : 0;
   const avgOdds    = bets.reduce((s, b) => s + b.odds, 0) / bets.length;
-  const wins       = bets.filter(b => b.result === 'W').length;
-  const losses     = bets.filter(b => b.result === 'L').length;
-  const pushes     = bets.filter(b => b.result === 'P').length;
-  const winPct     = wins / (wins + losses) * 100;
+  const sortedOdds = bets.map(b => b.odds).sort((a, b) => a - b);
+  const medOdds    = sortedOdds[Math.floor(sortedOdds.length / 2)];
+  const wins   = bets.filter(b => b.result === 'W').length;
+  const losses = bets.filter(b => b.result === 'L').length;
+  const pushes = bets.filter(b => b.result === 'P').length;
+  const winPct = wins / (wins + losses) * 100;
 
   const plEl = document.getElementById('statPL');
   plEl.textContent = (totalPL >= 0 ? '+' : '') + fmt(totalPL) + 'u';
@@ -297,15 +277,12 @@ function update() {
   roiEl.textContent = (roi >= 0 ? '+' : '') + fmt(roi) + '%';
   roiEl.className = 'value ' + (roi >= 0 ? 'pos' : 'neg');
 
-  document.getElementById('statCount').textContent  = bets.length.toLocaleString('fi');
-  const sortedOdds = bets.map(b => b.odds).sort((a,b) => a-b);
-  const medOdds = sortedOdds[Math.floor(sortedOdds.length / 2)];
-  document.getElementById('statOdds').textContent   = fmt(avgOdds);
-  document.getElementById('statOddsMed').textContent = `mediaani ${fmt(medOdds)}`;
-  document.getElementById('statRecord').textContent = `${wins}–${pushes}–${losses}`;
+  document.getElementById('statCount').textContent     = bets.length.toLocaleString('fi');
+  document.getElementById('statOdds').textContent      = fmt(avgOdds);
+  document.getElementById('statOddsMed').textContent   = `mediaani ${fmt(medOdds)}`;
+  document.getElementById('statRecord').textContent    = `${wins}–${pushes}–${losses}`;
   document.getElementById('statRecordSub').textContent = `${fmt(winPct, 1)}% voittoaste`;
 
-  // Monthly chart data
   const monthMap = {};
   (activeMonth === 'all' ? ALL_MONTHS : [activeMonth]).forEach(ym => monthMap[ym] = 0);
   bets.forEach(b => { if (monthMap[b.ym] !== undefined) monthMap[b.ym] += b.pl; });
@@ -313,18 +290,18 @@ function update() {
 }
 
 function updateChart(entries) {
-  const labels = entries.map(([ym]) => {
+  const labels  = entries.map(([ym]) => {
     const [y, m] = ym.split('-');
     const mn = ['','Tam','Hel','Maa','Huh','Tou','Kes','Hei','Elo','Syy','Lok','Mar','Jou'][parseInt(m)];
     return `${mn} ${y.slice(2)}`;
   });
-  const values = entries.map(([, v]) => parseFloat(v.toFixed(4)));
-  const colors = values.map(v => v >= 0 ? '#34d39966' : '#f8717166');
-  const borders= values.map(v => v >= 0 ? '#34d399' : '#f87171');
+  const values  = entries.map(([, v]) => parseFloat(v.toFixed(4)));
+  const colors  = values.map(v => v >= 0 ? '#34d39966' : '#f8717166');
+  const borders = values.map(v => v >= 0 ? '#34d399' : '#f87171');
 
   if (chart) {
     chart.data.labels = labels;
-    chart.data.datasets[0].data   = values;
+    chart.data.datasets[0].data            = values;
     chart.data.datasets[0].backgroundColor = colors;
     chart.data.datasets[0].borderColor     = borders;
     chart.update();
@@ -334,38 +311,16 @@ function updateChart(entries) {
   const ctx = document.getElementById('plChart').getContext('2d');
   chart = new Chart(ctx, {
     type: 'bar',
-    data: {
-      labels,
-      datasets: [{
-        data: values,
-        backgroundColor: colors,
-        borderColor: borders,
-        borderWidth: 1.5,
-        borderRadius: 4,
-      }]
-    },
+    data: { labels, datasets: [{ data: values, backgroundColor: colors, borderColor: borders, borderWidth: 1.5, borderRadius: 4 }] },
     options: {
       responsive: true,
       plugins: {
         legend: { display: false },
-        tooltip: {
-          callbacks: {
-            label: ctx => {
-              const v = ctx.parsed.y;
-              return (v >= 0 ? '+' : '') + v.toFixed(2).replace('.', ',') + 'u';
-            }
-          }
-        }
+        tooltip: { callbacks: { label: c => (c.parsed.y >= 0 ? '+' : '') + c.parsed.y.toFixed(2).replace('.', ',') + 'u' } }
       },
       scales: {
         x: { grid: { color: '#2e3350' }, ticks: { color: '#64748b', font: { size: 11 } } },
-        y: {
-          grid: { color: '#2e3350' },
-          ticks: {
-            color: '#64748b', font: { size: 11 },
-            callback: v => (v >= 0 ? '+' : '') + v.toFixed(1) + 'u'
-          }
-        }
+        y: { grid: { color: '#2e3350' }, ticks: { color: '#64748b', font: { size: 11 }, callback: v => (v >= 0 ? '+' : '') + v.toFixed(1) + 'u' } }
       }
     }
   });

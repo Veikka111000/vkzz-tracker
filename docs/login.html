@@ -220,11 +220,17 @@
       });
 
       // Email notification via Formspree
-      await fetch("https://formspree.io/f/xdenzgqn", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username, email, phone, time: new Date().toLocaleString("fi-FI") }),
-      });
+      try {
+        const fpRes = await fetch("https://formspree.io/f/xdenzgqn", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "Accept": "application/json" },
+          body: JSON.stringify({ username, email, phone, time: new Date().toLocaleString("fi-FI") }),
+        });
+        const fpJson = await fpRes.json();
+        console.log("Formspree status:", fpRes.status, fpJson);
+      } catch (fpErr) {
+        console.error("Formspree error:", fpErr);
+      }
 
       window.location.href = 'index.html';
     } catch (e) {

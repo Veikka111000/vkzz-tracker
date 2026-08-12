@@ -126,6 +126,7 @@
   }
   .global-err.show { display: block; }
 </style>
+<script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
 </head>
 <body>
 
@@ -191,9 +192,6 @@
 </div>
 
 <script type="module">
-import emailjs from "https://cdn.jsdelivr.net/npm/@emailjs/browser@4/+esm";
-emailjs.init("2UX_f8B_2vF93BA-d");
-
 import { initializeApp }                         from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import { getAuth, createUserWithEmailAndPassword,
          signInWithEmailAndPassword, updateProfile,
@@ -208,6 +206,8 @@ const firebaseConfig = {
   messagingSenderId: "113351713339",
   appId:             "1:113351713339:web:1ae9ba86b732237236b21e",
 };
+
+emailjs.init("2UX_f8B_2vF93BA-d");
 
 const app  = initializeApp(firebaseConfig);
 const auth = getAuth(app);
@@ -284,7 +284,7 @@ window.doRegister = async function() {
       email,
       phone,
       time: new Date().toLocaleString("fi-FI"),
-    }).catch(() => {}); // silently ignore if email fails
+    });
 
     window.location.href = 'index.html';
   } catch (e) {

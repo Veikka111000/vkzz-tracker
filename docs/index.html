@@ -488,8 +488,12 @@
         <div>
           <label>Password</label>
           <input type="password" id="login-password" required autocomplete="current-password">
+          <div style="text-align:right;margin-top:6px">
+            <span onclick="doResetPassword()" style="font-size:.78rem;color:var(--muted);cursor:pointer;text-decoration:underline">Forgot password?</span>
+          </div>
         </div>
         <div class="global-err" id="login-err"></div>
+        <div id="reset-ok" style="font-size:.82rem;color:var(--green);display:none">Password reset email sent — check your inbox.</div>
         <button type="submit" class="auth-btn-submit" id="login-submit">Log in</button>
       </form>
 
@@ -883,6 +887,21 @@ function switchAuthTab(tab) {
   });
   document.getElementById('form-login').classList.toggle('hidden', tab !== 'login');
   document.getElementById('form-register').classList.toggle('hidden', tab !== 'register');
+}
+
+async function doResetPassword() {
+  const email = document.getElementById('login-email').value.trim();
+  const errEl = document.getElementById('login-err');
+  const okEl  = document.getElementById('reset-ok');
+  errEl.classList.remove('show'); okEl.style.display = 'none';
+  if (!email) { errEl.textContent = 'Enter your email address first.'; errEl.classList.add('show'); return; }
+  try {
+    await auth.sendPasswordResetEmail(email);
+    okEl.style.display = 'block';
+  } catch(err) {
+    errEl.textContent = authErrMsg(err.code);
+    errEl.classList.add('show');
+  }
 }
 
 async function doLogin(e) {

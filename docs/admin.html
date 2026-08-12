@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="fi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admin — VkZz</title>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-functions-compat.js"></script>
+<script>
+  firebase.initializeApp({
+    apiKey:            "AIzaSyDJDAeuom8ynSHkbOfCM4g4ZpXg1an2OOI",
+    authDomain:        "vkzz-tracker.firebaseapp.com",
+    projectId:         "vkzz-tracker",
+    storageBucket:     "vkzz-tracker.firebasestorage.app",
+    messagingSenderId: "113351713339",
+    appId:             "1:113351713339:web:1ae9ba86b732237236b21e",
+  });
+  const auth      = firebase.auth();
+  const functions = firebase.app().functions('europe-west1');
+
+  auth.onAuthStateChanged(user => {
+    if (!user) { window.location.href = 'login.html'; return; }
+    document.getElementById('userLabel').textContent = user.displayName || user.email;
+    document.getElementById('page').style.display = 'block';
+  });
+</script>
+<style>
+  :root {
+    --bg:     #0f1117; --bg2: #1a1d27; --bg3: #22263a;
+    --border: #2e3350; --accent: #4f8ef7; --green: #34d399;
+    --red: #f87171; --text: #e2e8f0; --muted: #64748b; --radius: 10px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: 'Inter', system-ui, sans-serif; font-size: 15px; }
+  header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 22px 32px; border-bottom: 1px solid var(--border);
+  }
+  .header-left { display: flex; align-items: center; gap: 24px; }
+  header h1 { font-size: 1.4rem; font-weight: 700; }
+  .nav a { color: var(--muted); text-decoration: none; font-size: 0.88rem; }
+  .nav a:hover { color: var(--text); }
+  #userLabel { font-size: 0.85rem; color: var(--muted); }
+  .hbtn {
+    padding: 6px 14px; border-radius: 8px; font-size: 0.82rem;
+    cursor: pointer; border: 1px solid var(--border);
+    background: transparent; color: var(--muted); transition: all .15s;
+  }
+  .hbtn:hover { border-color: var(--red); color: var(--red); }
+
+  #page { display: none; }
+  .container { max-width: 640px; margin: 0 auto; padding: 36px 24px; }
+  h2 { font-size: 1.1rem; font-weight: 600; margin-bottom: 28px; }
+
+  .form { display: flex; flex-direction: column; gap: 16px; }
+  .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  label { font-size: 0.78rem; color: var(--muted); display: block; margin-bottom: 5px; text-transform: uppercase; letter-spacing: .06em; }
+  input, textarea, select {
+    width: 100%; background: var(--bg3); border: 1px solid var(--border);
+    border-radius: 8px; color: var(--text); padding: 9px 12px;
+    font-size: 0.9rem; outline: none; transition: border-color .15s;
+    font-family: inherit;
+  }
+  input:focus, textarea:focus, select:focus { border-color: var(--accent); }
+  textarea { min-height: 120px; resize: vertical; }
+  .btn {
+    padding: 11px; background: var(--accent); color: #fff;
+    border: none; border-radius: 8px; font-size: 0.95rem;
+    font-weight: 600; cursor: pointer; transition: opacity .15s;
+  }
+  .btn:hover { opacity: .88; }
+  .btn:disabled { opacity: .5; cursor: not-allowed; }
+  .success { background: #34d39922; border: 1px solid var(--green); border-radius: 8px; padding: 12px 14px; color: var(--green); font-size: 0.85rem; display: none; }
+  .error   { background: #f8717122; border: 1px solid var(--red);   border-radius: 8px; padding: 12px 14px; color: var(--red);   font-size: 0.85rem; display: none; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-left">
+    <h1>VkZz Admin</h1>
+    <nav class="nav" style="display:flex;gap:20px">
+      <a href="tips.html">← Vihjeet</a>
+    </nav>
+  </div>
+  <div style="display:flex;align-items:center;gap:12px">
+    <span id="userLabel"></span>
+    <button class="hbtn" onclick="auth.signOut().then(()=>location.href='login.html')">Kirjaudu ulos</button>
+  </div>
+</header>
+
+<div id="page">
+<div class="container">
+  <h2>Lisää uusi vihje</h2>
+  <div class="form">
+    <div>
+      <label>Otsikko *</label>
+      <input type="text" id="f_title" placeholder="esim. Djokovic vs Alcaraz — Alcaraz voittaa">
+    </div>
+    <div class="row2">
+      <div>
+        <label>Laji</label>
+        <select id="f_sport">
+          <option value="Tennis">Tennis</option>
+          <option value="Football">Football</option>
+          <option value="Basketball">Basketball</option>
+          <option value="Hockey">Hockey</option>
+          <option value="Darts">Darts</option>
+          <option value="Muu">Muu</option>
+        </select>
+      </div>
+      <div>
+        <label>Päivämäärä</label>
+        <input type="text" id="f_date" placeholder="esim. 13.8.2026">
+      </div>
+    </div>
+    <div>
+      <label>Ottelu</label>
+      <input type="text" id="f_match" placeholder="esim. Djokovic vs Alcaraz">
+    </div>
+    <div class="row2">
+      <div>
+        <label>Kerroin</label>
+        <input type="number" id="f_odds" step="0.01" placeholder="esim. 1.85">
+      </div>
+      <div>
+        <label>Suositus (u)</label>
+        <input type="number" id="f_stake" step="0.5" placeholder="esim. 2">
+      </div>
+    </div>
+    <div>
+      <label>Hinta (€) *</label>
+      <input type="number" id="f_price" step="0.5" min="1" placeholder="esim. 5">
+    </div>
+    <div>
+      <label>Vihje (näkyy vain ostajille) *</label>
+      <textarea id="f_content" placeholder="Kirjoita vihje tähän. Ostajat näkevät tämän tekstin maksun jälkeen."></textarea>
+    </div>
+    <div class="success" id="successMsg">Vihje lisätty!</div>
+    <div class="error"   id="errorMsg"></div>
+    <button class="btn" onclick="submitTip()">Lisää vihje</button>
+  </div>
+</div>
+</div>
+
+<script>
+async function submitTip() {
+  const title   = document.getElementById('f_title').value.trim();
+  const sport   = document.getElementById('f_sport').value;
+  const date    = document.getElementById('f_date').value.trim();
+  const match   = document.getElementById('f_match').value.trim();
+  const odds    = parseFloat(document.getElementById('f_odds').value) || null;
+  const stake   = parseFloat(document.getElementById('f_stake').value) || null;
+  const price   = parseFloat(document.getElementById('f_price').value);
+  const content = document.getElementById('f_content').value.trim();
+
+  const errEl = document.getElementById('errorMsg');
+  const okEl  = document.getElementById('successMsg');
+  errEl.style.display = 'none';
+  okEl.style.display  = 'none';
+
+  if (!title || !price || !content) {
+    errEl.textContent = 'Täytä pakolliset kentät (otsikko, hinta, vihje).';
+    errEl.style.display = 'block';
+    return;
+  }
+
+  const btn = document.querySelector('.btn');
+  btn.disabled = true;
+  btn.textContent = 'Lisätään...';
+
+  try {
+    const fn = functions.httpsCallable('addTip');
+    await fn({ title, sport, date, match, odds, stake, price, content });
+    okEl.style.display = 'block';
+    document.querySelectorAll('input, textarea').forEach(el => el.value = '');
+  } catch (e) {
+    errEl.textContent = e.message || 'Virhe. Yritä uudelleen.';
+    errEl.style.display = 'block';
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Lisää vihje';
+  }
+}
+</script>
+</body>
+</html>

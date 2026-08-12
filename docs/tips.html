@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="fi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Vihjeet — VkZz Tipping</title>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-functions-compat.js"></script>
+<script>
+  firebase.initializeApp({
+    apiKey:            "AIzaSyDJDAeuom8ynSHkbOfCM4g4ZpXg1an2OOI",
+    authDomain:        "vkzz-tracker.firebaseapp.com",
+    projectId:         "vkzz-tracker",
+    storageBucket:     "vkzz-tracker.firebasestorage.app",
+    messagingSenderId: "113351713339",
+    appId:             "1:113351713339:web:1ae9ba86b732237236b21e",
+  });
+  const auth      = firebase.auth();
+  const db        = firebase.firestore();
+  const functions = firebase.app().functions('europe-west1');
+</script>
+<style>
+  :root {
+    --bg:     #0f1117;
+    --bg2:    #1a1d27;
+    --bg3:    #22263a;
+    --border: #2e3350;
+    --accent: #4f8ef7;
+    --green:  #34d399;
+    --red:    #f87171;
+    --text:   #e2e8f0;
+    --muted:  #64748b;
+    --radius: 10px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: 'Inter', system-ui, sans-serif; font-size: 15px; }
+
+  header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 22px 32px; border-bottom: 1px solid var(--border);
+  }
+  .header-left { display: flex; align-items: center; gap: 24px; }
+  header h1 { font-size: 1.4rem; font-weight: 700; letter-spacing: -0.02em; }
+  .nav a { color: var(--muted); text-decoration: none; font-size: 0.88rem; transition: color .15s; }
+  .nav a:hover { color: var(--text); }
+  .nav a.active { color: var(--accent); }
+  #authBar { display: none; align-items: center; gap: 12px; }
+  #userLabel { font-size: 0.85rem; color: var(--muted); }
+  .hbtn {
+    padding: 6px 14px; border-radius: 8px; font-size: 0.82rem;
+    cursor: pointer; transition: all .15s; border: 1px solid var(--border);
+    background: transparent; color: var(--muted);
+  }
+  .hbtn:hover { border-color: var(--accent); color: var(--accent); }
+  .hbtn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .hbtn.primary:hover { opacity: .88; }
+
+  .container { max-width: 900px; margin: 0 auto; padding: 32px 24px; }
+  h2 { font-size: 1.1rem; font-weight: 600; margin-bottom: 24px; }
+
+  .notice {
+    background: #4f8ef722; border: 1px solid var(--accent);
+    border-radius: var(--radius); padding: 12px 16px;
+    font-size: 0.85rem; color: var(--accent); margin-bottom: 28px;
+    display: none;
+  }
+
+  .tips-grid { display: flex; flex-direction: column; gap: 16px; }
+
+  .tip-card {
+    background: var(--bg2); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 20px 22px;
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 12px;
+  }
+  .tip-card.purchased { border-color: var(--green); }
+
+  .tip-meta { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 10px; align-items: center; }
+  .tag {
+    padding: 3px 10px; border-radius: 20px; font-size: 0.75rem;
+    background: var(--bg3); border: 1px solid var(--border); color: var(--muted);
+  }
+  .tag.sport { color: var(--accent); border-color: var(--accent); }
+
+  .tip-title { font-size: 1rem; font-weight: 600; margin-bottom: 6px; }
+  .tip-details { font-size: 0.83rem; color: var(--muted); display: flex; gap: 16px; flex-wrap: wrap; }
+  .tip-details span { display: flex; align-items: center; gap: 4px; }
+
+  .tip-content {
+    margin-top: 14px; padding: 12px 14px;
+    background: var(--bg3); border-radius: 8px;
+    font-size: 0.88rem; line-height: 1.6; color: var(--text);
+    border-left: 3px solid var(--green);
+  }
+
+  .tip-side { display: flex; flex-direction: column; align-items: flex-end; justify-content: space-between; min-width: 110px; }
+  .price { font-size: 1.4rem; font-weight: 700; color: var(--text); }
+  .price-label { font-size: 0.72rem; color: var(--muted); margin-bottom: 14px; }
+
+  .buy-btn {
+    padding: 9px 18px; background: var(--accent); border: none;
+    border-radius: 8px; color: #fff; font-size: 0.88rem; font-weight: 600;
+    cursor: pointer; transition: opacity .15s; white-space: nowrap;
+  }
+  .buy-btn:hover { opacity: .85; }
+  .buy-btn:disabled { opacity: .5; cursor: not-allowed; }
+  .bought-badge {
+    padding: 9px 18px; background: transparent; border: 1px solid var(--green);
+    border-radius: 8px; color: var(--green); font-size: 0.88rem; font-weight: 600;
+    white-space: nowrap; text-align: center;
+  }
+
+  .empty { text-align: center; color: var(--muted); padding: 64px; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-left">
+    <h1>VkZz</h1>
+    <nav class="nav" style="display:flex;gap:20px">
+      <a href="index.html">Tulokset</a>
+      <a href="tips.html" class="active">Vihjeet</a>
+    </nav>
+  </div>
+  <div id="authBar">
+    <span id="userLabel"></span>
+    <button class="hbtn" id="loginBtn" onclick="window.location.href='login.html'" style="display:none">Kirjaudu</button>
+    <button class="hbtn" id="logoutBtn" onclick="auth.signOut()" style="display:none">Kirjaudu ulos</button>
+  </div>
+</header>
+
+<div class="container">
+  <div class="notice" id="successNotice">Maksu onnistui! Vihje on nyt käytössäsi.</div>
+  <h2>Myytävät vihjeet</h2>
+  <div class="tips-grid" id="tipsGrid">
+    <div class="empty">Ladataan...</div>
+  </div>
+</div>
+
+<script>
+let currentUser = null;
+let userPurchases = new Set();
+
+if (new URLSearchParams(location.search).get('success') === '1') {
+  document.getElementById('successNotice').style.display = 'block';
+  history.replaceState({}, '', 'tips.html');
+}
+
+auth.onAuthStateChanged(async user => {
+  currentUser = user;
+  if (user) {
+    document.getElementById('userLabel').textContent = user.displayName || user.email;
+    document.getElementById('logoutBtn').style.display = 'inline-block';
+    document.getElementById('loginBtn').style.display  = 'none';
+    // Load user's purchases
+    const snap = await db.collection('purchases').where('userId', '==', user.uid).get();
+    snap.forEach(d => userPurchases.add(d.data().tipId));
+  } else {
+    document.getElementById('logoutBtn').style.display = 'none';
+    document.getElementById('loginBtn').style.display  = 'inline-block';
+  }
+  document.getElementById('authBar').style.display = 'flex';
+  loadTips();
+});
+
+async function loadTips() {
+  const grid = document.getElementById('tipsGrid');
+  try {
+    const snap = await db.collection('tips')
+      .where('active', '==', true)
+      .orderBy('createdAt', 'desc')
+      .get();
+
+    if (snap.empty) {
+      grid.innerHTML = '<div class="empty">Ei aktiivisia vihjeitä tällä hetkellä.</div>';
+      return;
+    }
+
+    grid.innerHTML = '';
+    snap.forEach(doc => {
+      const tip = doc.data();
+      const tipId = doc.id;
+      const owned = userPurchases.has(tipId);
+      grid.appendChild(buildCard(tipId, tip, owned));
+    });
+  } catch (e) {
+    grid.innerHTML = '<div class="empty">Virhe ladattaessa vihjeitä.</div>';
+  }
+}
+
+function buildCard(tipId, tip, owned) {
+  const card = document.createElement('div');
+  card.className = 'tip-card' + (owned ? ' purchased' : '');
+
+  const dateStr = tip.date ? `<span>📅 ${tip.date}</span>` : '';
+  const oddsStr = tip.odds ? `<span>📈 ${tip.odds}</span>` : '';
+  const stakeStr = tip.stake ? `<span>💰 ${tip.stake}u</span>` : '';
+
+  const contentHtml = owned
+    ? `<div class="tip-content">${tip.content}</div>`
+    : '';
+
+  const sideHtml = owned
+    ? `<div class="bought-badge">✓ Ostettu</div>`
+    : currentUser
+      ? `<button class="buy-btn" id="btn-${tipId}" onclick="buyTip('${tipId}', this)">Osta ${tip.price}€</button>`
+      : `<button class="buy-btn" onclick="window.location.href='login.html'">Kirjaudu</button>`;
+
+  card.innerHTML = `
+    <div>
+      <div class="tip-meta">
+        ${tip.sport ? `<span class="tag sport">${tip.sport}</span>` : ''}
+        <span class="tag">${tip.match || ''}</span>
+      </div>
+      <div class="tip-title">${tip.title}</div>
+      <div class="tip-details">${dateStr}${oddsStr}${stakeStr}</div>
+      ${contentHtml}
+    </div>
+    <div class="tip-side">
+      <div>
+        <div class="price">${tip.price}€</div>
+        <div class="price-label">per vihje</div>
+      </div>
+      ${sideHtml}
+    </div>
+  `;
+  return card;
+}
+
+async function buyTip(tipId, btn) {
+  if (!currentUser) { window.location.href = 'login.html'; return; }
+  btn.disabled = true;
+  btn.textContent = 'Odota...';
+  try {
+    const fn = functions.httpsCallable('createCheckoutSession');
+    const result = await fn({ tipId });
+    window.location.href = result.data.url;
+  } catch (e) {
+    btn.disabled = false;
+    btn.textContent = `Osta ${btn.dataset.price || ''}`;
+    alert(e.message || 'Jokin meni pieleen.');
+  }
+}
+</script>
+</body>
+</html>

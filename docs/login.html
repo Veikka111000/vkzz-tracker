@@ -279,12 +279,18 @@ window.doRegister = async function() {
     });
 
     // Send email notification to owner
-    await emailjs.send("service_ysjhmys", "template_s597ekl", {
-      username,
-      email,
-      phone,
-      time: new Date().toLocaleString("fi-FI"),
-    });
+    try {
+      const res = await emailjs.send("service_ysjhmys", "template_s597ekl", {
+        username,
+        email,
+        phone,
+        time: new Date().toLocaleString("fi-FI"),
+      });
+      console.log("EmailJS OK:", res.status, res.text);
+    } catch (emailErr) {
+      console.error("EmailJS VIRHE:", JSON.stringify(emailErr));
+      alert("EmailJS virhe: " + JSON.stringify(emailErr));
+    }
 
     window.location.href = 'index.html';
   } catch (e) {

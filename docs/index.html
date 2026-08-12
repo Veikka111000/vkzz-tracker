@@ -431,6 +431,10 @@
     <!-- Code list -->
     <div id="dcList"><div class="empty" style="padding:20px">Loading codes...</div></div>
 
+    <!-- Users -->
+    <div class="section-title" style="margin-top:48px">Users</div>
+    <div id="adminUsersList"><div class="empty" style="padding:20px">Loading users...</div></div>
+
     <!-- Manage tips -->
     <div class="section-title" style="margin-top:48px">Manage tips</div>
     <div id="adminTipsList"><div class="empty" style="padding:20px">Loading tips...</div></div>
@@ -593,7 +597,7 @@ function showView(name) {
   const navEl = document.querySelector(`[data-view="${name}"]`);
   if (navEl) navEl.classList.add('active');
   if (name === 'tips' && !tipsLoaded) { tipsLoaded = true; loadTips(); }
-  if (name === 'admin') { loadDiscountCodes(); loadAdminTips(); }
+  if (name === 'admin') { loadDiscountCodes(); loadAdminTips(); loadAdminUsers(); }
   // Close sidebar on mobile after navigation
   if (isMobile()) {
     document.getElementById('sidebar').classList.remove('open');
@@ -827,6 +831,34 @@ async function loadDiscountCodes() {
         </tbody>
       </table>`;
   } catch(e) { list.innerHTML = '<div style="color:var(--red);font-size:.85rem">Error loading codes.</div>'; }
+}
+
+async function loadAdminUsers() {
+  const list = document.getElementById('adminUsersList');
+  try {
+    const result = await functions.httpsCallable('listUsers')({});
+    const users = result.data;
+    if (!users.length) { list.innerHTML = '<div style="color:var(--muted);font-size:.85rem;padding:8px 0">No users yet.</div>'; return; }
+    list.innerHTML = `
+      <table style="width:100%;max-width:700px;border-collapse:collapse;font-size:.85rem">
+        <thead><tr style="color:var(--muted);text-align:left">
+          <th style="padding:6px 10px">Name</th>
+          <th style="padding:6px 10px">Email</th>
+          <th style="padding:6px 10px">Phone</th>
+          <th style="padding:6px 10px">Newsletter</th>
+          <th style="padding:6px 10px">Registered</th>
+        </tr></thead>
+        <tbody>${users.map(u => `
+          <tr style="border-top:1px solid var(--border)">
+            <td style="padding:8px 10px;font-weight:600">${u.displayName || '—'}</td>
+            <td style="padding:8px 10px">${u.email || '—'}</td>
+            <td style="padding:8px 10px">${u.phone || '—'}</td>
+            <td style="padding:8px 10px;color:${u.newsletter ? 'var(--green)' : 'var(--muted)'}">${u.newsletter ? 'Yes' : 'No'}</td>
+            <td style="padding:8px 10px;color:var(--muted)">${u.createdAt ? new Date(u.createdAt).toLocaleDateString('fi') : '—'}</td>
+          </tr>`).join('')}
+        </tbody>
+      </table>`;
+  } catch(e) { list.innerHTML = '<div style="color:var(--red);font-size:.85rem">Error loading users.</div>'; }
 }
 
 async function loadAdminTips() {

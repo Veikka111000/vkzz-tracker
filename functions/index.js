@@ -200,6 +200,26 @@ exports.toggleDiscountCode = onCall({ cors: true }, async (request) => {
   return { ok: true };
 });
 
+// ── List Users (admin only) ───────────────────────────────────────────────────
+
+exports.listUsers = onCall({ cors: true }, async (request) => {
+  if (!request.auth || request.auth.uid !== ADMIN_UID)
+    throw new HttpsError("permission-denied", "Ei oikeuksia.");
+
+  const snap = await db.collection("users").orderBy("createdAt", "desc").get();
+  return snap.docs.map(d => {
+    const u = d.data();
+    return {
+      uid:         d.id,
+      displayName: u.displayName || "",
+      email:       u.email || "",
+      phone:       u.phone || "",
+      newsletter:  u.newsletter || false,
+      createdAt:   u.createdAt?.toMillis() || null,
+    };
+  });
+});
+
 // ── Delete Tip (admin only) ───────────────────────────────────────────────────
 
 exports.deleteTip = onCall({ cors: true }, async (request) => {

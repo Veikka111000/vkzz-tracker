@@ -3,10 +3,12 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Betting Tracker</title>
+<title>VkZz</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-functions-compat.js"></script>
 <script>
   firebase.initializeApp({
     apiKey:            "AIzaSyDJDAeuom8ynSHkbOfCM4g4ZpXg1an2OOI",
@@ -16,303 +18,362 @@
     messagingSenderId: "113351713339",
     appId:             "1:113351713339:web:1ae9ba86b732237236b21e",
   });
-  const auth = firebase.auth();
-  auth.onAuthStateChanged(user => {
-    if (user) {
-      document.getElementById('userLabel').textContent = user.displayName || user.email;
-      document.getElementById('logoutBtn').style.display = 'inline-block';
-      document.getElementById('loginBtn').style.display  = 'none';
-    } else {
-      document.getElementById('logoutBtn').style.display = 'none';
-      document.getElementById('loginBtn').style.display  = 'inline-block';
-    }
-    document.getElementById('authBar').style.display = 'flex';
-  });
-  function _signOut() { auth.signOut(); }
+  const auth      = firebase.auth();
+  const db        = firebase.firestore();
+  const functions = firebase.app().functions('europe-west1');
+  const ADMIN_UID = 'o185I7onj5dZPDQCXpTqhdPX5Al2';
 </script>
 <style>
   :root {
-    --bg:      #0f1117;
-    --bg2:     #1a1d27;
-    --bg3:     #22263a;
-    --border:  #2e3350;
-    --accent:  #4f8ef7;
-    --green:   #34d399;
-    --red:     #f87171;
-    --text:    #e2e8f0;
-    --muted:   #64748b;
-    --radius:  10px;
+    --bg:     #0f1117;
+    --bg2:    #1a1d27;
+    --bg3:    #22263a;
+    --border: #2e3350;
+    --accent: #4f8ef7;
+    --green:  #34d399;
+    --red:    #f87171;
+    --text:   #e2e8f0;
+    --muted:  #64748b;
+    --radius: 10px;
+    --sidebar:180px;
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { background: var(--bg); color: var(--text); font-family: 'Inter', system-ui, sans-serif; font-size: 15px; }
-
-  header {
-    padding: 28px 32px 20px;
-    border-bottom: 1px solid var(--border);
+  body {
+    background: var(--bg); color: var(--text);
+    font-family: 'Inter', system-ui, sans-serif; font-size: 15px;
+    display: flex; min-height: 100vh;
   }
-  header { display: flex; align-items: center; justify-content: space-between; }
-  header h1 { font-size: 1.5rem; font-weight: 700; letter-spacing: -0.02em; }
-  #authBar { display: none; align-items: center; gap: 12px; }
-  #userLabel { font-size: 0.85rem; color: var(--muted); }
-  .logout-btn {
-    padding: 6px 14px;
-    background: transparent;
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    color: var(--muted);
-    font-size: 0.82rem;
-    cursor: pointer;
-    transition: all .15s;
-  }
-  .logout-btn:hover { border-color: var(--red); color: var(--red); }
 
-  .container { max-width: 1100px; margin: 0 auto; padding: 28px 24px; }
-
-  /* Filters */
-  .filters {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 20px;
-    align-items: flex-start;
+  /* ── Sidebar ── */
+  .sidebar {
+    width: var(--sidebar);
     background: var(--bg2);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    padding: 18px 20px;
-    margin-bottom: 28px;
+    border-right: 1px solid var(--border);
+    display: flex; flex-direction: column;
+    position: fixed; top: 0; left: 0; bottom: 0;
+    padding: 24px 0;
+  }
+  .sidebar-brand {
+    font-size: 1.4rem; font-weight: 700; letter-spacing: -0.02em;
+    padding: 0 20px 24px; border-bottom: 1px solid var(--border);
+  }
+  .sidebar-nav { flex: 1; padding: 16px 10px; display: flex; flex-direction: column; gap: 4px; }
+  .nav-item {
+    display: flex; align-items: center; gap: 10px;
+    padding: 9px 12px; border-radius: 8px;
+    color: var(--muted); font-size: 0.9rem;
+    cursor: pointer; transition: all .15s; user-select: none;
+  }
+  .nav-item:hover { background: var(--bg3); color: var(--text); }
+  .nav-item.active { background: var(--bg3); color: var(--accent); font-weight: 600; }
+  .nav-icon { font-size: 1rem; width: 20px; text-align: center; }
+
+  .sidebar-footer {
+    padding: 16px 14px 0;
+    border-top: 1px solid var(--border);
+    display: flex; flex-direction: column; gap: 10px;
+  }
+  .user-info { font-size: 0.78rem; color: var(--muted); line-height: 1.4; word-break: break-all; }
+  .auth-btn {
+    width: 100%; padding: 8px; border-radius: 8px; font-size: 0.82rem;
+    cursor: pointer; transition: all .15s; border: 1px solid var(--border);
+    background: transparent; color: var(--muted);
+  }
+  .auth-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .auth-btn.logout:hover { border-color: var(--red); color: var(--red); }
+
+  /* ── Main ── */
+  .main {
+    margin-left: var(--sidebar);
+    flex: 1; padding: 32px 28px;
+    max-width: calc(100vw - var(--sidebar));
+  }
+
+  /* ── Views ── */
+  .view { display: none; }
+  .view.active { display: block; }
+
+  /* ── Results view ── */
+  .filters {
+    display: flex; flex-wrap: wrap; gap: 20px; align-items: flex-start;
+    background: var(--bg2); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 18px 20px; margin-bottom: 28px;
   }
   .filter-group { display: flex; flex-direction: column; gap: 8px; }
   .filter-group label { font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); }
   .sport-chips { display: flex; flex-wrap: wrap; gap: 6px; }
   .chip {
-    cursor: pointer;
-    padding: 5px 12px;
-    border-radius: 20px;
-    font-size: 0.82rem;
-    border: 1px solid var(--border);
-    background: var(--bg3);
-    color: var(--muted);
-    transition: all .15s;
-    user-select: none;
+    cursor: pointer; padding: 5px 12px; border-radius: 20px; font-size: 0.82rem;
+    border: 1px solid var(--border); background: var(--bg3); color: var(--muted);
+    transition: all .15s; user-select: none;
   }
   .chip.active { background: var(--accent); border-color: var(--accent); color: #fff; }
   .chip:hover:not(.active) { border-color: var(--accent); color: var(--text); }
-
   select {
-    background: var(--bg3);
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    color: var(--text);
-    padding: 7px 12px;
-    font-size: 0.88rem;
-    cursor: pointer;
-    outline: none;
-    min-width: 160px;
+    background: var(--bg3); border: 1px solid var(--border); border-radius: 8px;
+    color: var(--text); padding: 7px 12px; font-size: 0.88rem; cursor: pointer; outline: none; min-width: 160px;
   }
   select:focus { border-color: var(--accent); }
-
-  /* Stats cards */
   .stats-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
-    gap: 14px;
-    margin-bottom: 32px;
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+    gap: 14px; margin-bottom: 32px;
   }
-  .card {
-    background: var(--bg2);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    padding: 16px 18px;
-  }
+  .card { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px 18px; }
   .card .label { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.07em; color: var(--muted); margin-bottom: 6px; }
   .card .value { font-size: 1.55rem; font-weight: 700; letter-spacing: -0.02em; }
   .card .sub   { font-size: 0.78rem; color: var(--muted); margin-top: 3px; }
-  .pos { color: var(--green); }
-  .neg { color: var(--red); }
-  .neu { color: var(--text); }
-
-  /* Chart */
+  .pos { color: var(--green); } .neg { color: var(--red); } .neu { color: var(--text); }
   .chart-wrap {
-    background: var(--bg2);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    padding: 20px;
-    margin-bottom: 28px;
+    background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius);
+    padding: 20px; margin-bottom: 28px;
   }
   .chart-wrap h2 { font-size: 0.9rem; font-weight: 600; color: var(--muted); margin-bottom: 16px; text-transform: uppercase; letter-spacing: 0.06em; }
   .chart-wrap canvas { max-height: 240px; }
 
-  .empty { text-align: center; color: var(--muted); padding: 48px; }
+  /* ── Tips view ── */
+  .section-title { font-size: 1.05rem; font-weight: 600; margin-bottom: 22px; }
+  .tips-list { display: flex; flex-direction: column; gap: 14px; }
+  .tip-card {
+    background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius);
+    padding: 20px 22px; display: grid; grid-template-columns: 1fr auto; gap: 16px;
+  }
+  .tip-card.purchased { border-color: var(--green); }
+  .tip-meta { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; align-items: center; }
+  .tag { padding: 3px 10px; border-radius: 20px; font-size: 0.75rem; background: var(--bg3); border: 1px solid var(--border); color: var(--muted); }
+  .tag.sport { color: var(--accent); border-color: var(--accent); }
+  .tip-title { font-size: 1rem; font-weight: 600; margin-bottom: 6px; }
+  .tip-details { font-size: 0.83rem; color: var(--muted); display: flex; gap: 14px; flex-wrap: wrap; }
+  .tip-content {
+    margin-top: 14px; padding: 12px 14px; background: var(--bg3); border-radius: 8px;
+    font-size: 0.88rem; line-height: 1.6; border-left: 3px solid var(--green);
+  }
+  .tip-side { display: flex; flex-direction: column; align-items: flex-end; justify-content: space-between; min-width: 110px; }
+  .price { font-size: 1.4rem; font-weight: 700; }
+  .price-label { font-size: 0.72rem; color: var(--muted); margin-bottom: 14px; }
+  .buy-btn {
+    padding: 9px 18px; background: var(--accent); border: none;
+    border-radius: 8px; color: #fff; font-size: 0.88rem; font-weight: 600;
+    cursor: pointer; transition: opacity .15s; white-space: nowrap;
+  }
+  .buy-btn:hover { opacity: .85; }
+  .buy-btn:disabled { opacity: .5; cursor: not-allowed; }
+  .bought-badge {
+    padding: 9px 18px; background: transparent; border: 1px solid var(--green);
+    border-radius: 8px; color: var(--green); font-size: 0.88rem; font-weight: 600;
+    white-space: nowrap; text-align: center;
+  }
+  .notice {
+    background: #34d39922; border: 1px solid var(--green); border-radius: var(--radius);
+    padding: 12px 16px; font-size: 0.85rem; color: var(--green); margin-bottom: 22px; display: none;
+  }
+
+  /* ── Admin view ── */
+  .admin-form { max-width: 600px; display: flex; flex-direction: column; gap: 16px; }
+  .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .field-label { font-size: 0.78rem; color: var(--muted); display: block; margin-bottom: 5px; text-transform: uppercase; letter-spacing: .06em; }
+  .field input, .field textarea, .field select {
+    width: 100%; background: var(--bg3); border: 1px solid var(--border);
+    border-radius: 8px; color: var(--text); padding: 9px 12px; font-size: 0.9rem;
+    outline: none; transition: border-color .15s; font-family: inherit;
+  }
+  .field input:focus, .field textarea:focus, .field select:focus { border-color: var(--accent); }
+  .field textarea { min-height: 110px; resize: vertical; }
+  .submit-btn {
+    padding: 11px; background: var(--accent); color: #fff; border: none;
+    border-radius: 8px; font-size: 0.95rem; font-weight: 600; cursor: pointer; transition: opacity .15s;
+  }
+  .submit-btn:hover { opacity: .88; }
+  .submit-btn:disabled { opacity: .5; cursor: not-allowed; }
+  .msg-ok  { background: #34d39922; border: 1px solid var(--green); border-radius: 8px; padding: 10px 14px; color: var(--green); font-size: 0.85rem; display: none; }
+  .msg-err { background: #f8717122; border: 1px solid var(--red);   border-radius: 8px; padding: 10px 14px; color: var(--red);   font-size: 0.85rem; display: none; }
+
+  .empty { text-align: center; color: var(--muted); padding: 56px; }
 </style>
 </head>
 <body>
 
-<header>
-  <div style="display:flex;align-items:center;gap:24px">
-    <h1>VkZz</h1>
-    <nav style="display:flex;gap:20px">
-      <a href="index.html" style="color:var(--accent);text-decoration:none;font-size:.88rem">Tulokset</a>
-      <a href="tips.html"  style="color:var(--muted);text-decoration:none;font-size:.88rem">Vihjeet</a>
-    </nav>
+<!-- Sidebar -->
+<aside class="sidebar">
+  <div class="sidebar-brand">VkZz</div>
+  <nav class="sidebar-nav">
+    <div class="nav-item active" data-view="results" onclick="showView('results')">
+      <span class="nav-icon">📊</span> Tulokset
+    </div>
+    <div class="nav-item" data-view="tips" onclick="showView('tips')">
+      <span class="nav-icon">💡</span> Vihjeet
+    </div>
+    <div class="nav-item" id="adminNav" style="display:none" data-view="admin" onclick="showView('admin')">
+      <span class="nav-icon">⚙️</span> Admin
+    </div>
+  </nav>
+  <div class="sidebar-footer">
+    <div class="user-info" id="userLabel" style="display:none"></div>
+    <button class="auth-btn"        id="loginBtn"  onclick="showView('login')"  style="display:none">Kirjaudu</button>
+    <button class="auth-btn logout" id="logoutBtn" onclick="auth.signOut()"     style="display:none">Kirjaudu ulos</button>
   </div>
-  <div id="authBar">
-    <span id="userLabel"></span>
-    <button class="logout-btn" id="loginBtn" onclick="window.location.href='login.html'" style="display:none">Kirjaudu</button>
-    <button class="logout-btn" id="logoutBtn" onclick="_signOut()" style="display:none">Kirjaudu ulos</button>
-  </div>
-</header>
+</aside>
 
-<div class="container">
+<!-- Main -->
+<main class="main">
 
-  <!-- Filters -->
-  <div class="filters">
-    <div class="filter-group">
-      <label>Laji</label>
-      <div class="sport-chips" id="sportChips"></div>
+  <!-- Results -->
+  <div class="view active" id="view-results">
+    <div class="filters">
+      <div class="filter-group">
+        <label>Laji</label>
+        <div class="sport-chips" id="sportChips"></div>
+      </div>
+      <div class="filter-group">
+        <label>Ajanjakso</label>
+        <select id="monthSelect"><option value="all">Kaikki</option></select>
+      </div>
     </div>
-    <div class="filter-group">
-      <label>Ajanjakso</label>
-      <select id="monthSelect">
-        <option value="all">Kaikki</option>
-      </select>
+    <div class="stats-grid">
+      <div class="card"><div class="label">Vedot</div><div class="value neu" id="statCount">—</div></div>
+      <div class="card"><div class="label">ROI</div><div class="value" id="statROI">—</div></div>
+      <div class="card"><div class="label">P/L (u)</div><div class="value" id="statPL">—</div></div>
+      <div class="card"><div class="label">Avg kerroin</div><div class="value neu" id="statOdds">—</div><div class="sub" id="statOddsMed"></div></div>
+      <div class="card"><div class="label">Record</div><div class="value neu" id="statRecord">—</div><div class="sub" id="statRecordSub"></div></div>
     </div>
-  </div>
-
-  <!-- Stats -->
-  <div class="stats-grid">
-    <div class="card">
-      <div class="label">Vedot</div>
-      <div class="value neu" id="statCount">—</div>
-    </div>
-    <div class="card">
-      <div class="label">ROI</div>
-      <div class="value" id="statROI">—</div>
-    </div>
-    <div class="card">
-      <div class="label">P/L (u)</div>
-      <div class="value" id="statPL">—</div>
-    </div>
-    <div class="card">
-      <div class="label">Avg kerroin</div>
-      <div class="value neu" id="statOdds">—</div>
-      <div class="sub" id="statOddsMed"></div>
-    </div>
-    <div class="card">
-      <div class="label">Record</div>
-      <div class="value neu" id="statRecord">—</div>
-      <div class="sub" id="statRecordSub"></div>
+    <div class="chart-wrap">
+      <h2>Kuukausittainen P/L (u)</h2>
+      <canvas id="plChart"></canvas>
     </div>
   </div>
 
-  <!-- Chart -->
-  <div class="chart-wrap">
-    <h2>Kuukausittainen P/L (u)</h2>
-    <canvas id="plChart"></canvas>
+  <!-- Tips -->
+  <div class="view" id="view-tips">
+    <div class="notice" id="successNotice">Maksu onnistui! Vihje on nyt käytössäsi.</div>
+    <div class="section-title">Myytävät vihjeet</div>
+    <div class="tips-list" id="tipsGrid"><div class="empty">Ladataan...</div></div>
   </div>
 
-</div>
+  <!-- Admin -->
+  <div class="view" id="view-admin">
+    <div class="section-title">Lisää uusi vihje</div>
+    <div class="admin-form">
+      <div class="field"><label class="field-label">Otsikko *</label><input type="text" id="f_title" placeholder="esim. Djokovic vs Alcaraz — Alcaraz voittaa"></div>
+      <div class="row2">
+        <div class="field">
+          <label class="field-label">Laji</label>
+          <select id="f_sport">
+            <option>Tennis</option><option>Football</option><option>Basketball</option>
+            <option>Hockey</option><option>Darts</option><option>Muu</option>
+          </select>
+        </div>
+        <div class="field"><label class="field-label">Päivämäärä</label><input type="text" id="f_date" placeholder="13.8.2026"></div>
+      </div>
+      <div class="field"><label class="field-label">Ottelu</label><input type="text" id="f_match" placeholder="esim. Djokovic vs Alcaraz"></div>
+      <div class="row2">
+        <div class="field"><label class="field-label">Kerroin</label><input type="number" id="f_odds" step="0.01" placeholder="1.85"></div>
+        <div class="field"><label class="field-label">Suositus (u)</label><input type="number" id="f_stake" step="0.5" placeholder="2"></div>
+      </div>
+      <div class="field"><label class="field-label">Hinta (€) *</label><input type="number" id="f_price" step="0.5" min="1" placeholder="5"></div>
+      <div class="field"><label class="field-label">Vihje (näkyy vain ostajille) *</label><textarea id="f_content" placeholder="Kirjoita vihje tähän..."></textarea></div>
+      <div class="msg-ok"  id="adminOk">Vihje lisätty!</div>
+      <div class="msg-err" id="adminErr"></div>
+      <button class="submit-btn" onclick="submitTip()">Lisää vihje</button>
+    </div>
+  </div>
+
+  <!-- Login redirect placeholder -->
+  <div class="view" id="view-login"></div>
+
+</main>
 
 <script>
-let ALL_BETS = [];
-let ALL_SPORTS = [];
-let ALL_MONTHS = [];
-let chart = null;
+// ── Auth ─────────────────────────────────────────────────────────────────────
+let currentUser = null;
+let userPurchases = new Set();
+let tipsLoaded = false;
 
-let activeSport = 'all';
-let activeMonth = 'all';
+auth.onAuthStateChanged(async user => {
+  currentUser = user;
+  if (user) {
+    document.getElementById('userLabel').textContent = user.displayName || user.email;
+    document.getElementById('userLabel').style.display = 'block';
+    document.getElementById('logoutBtn').style.display = 'block';
+    document.getElementById('loginBtn').style.display  = 'none';
+    if (user.uid === ADMIN_UID) document.getElementById('adminNav').style.display = 'flex';
+    const snap = await db.collection('purchases').where('userId', '==', user.uid).get();
+    snap.forEach(d => userPurchases.add(d.data().tipId));
+  } else {
+    document.getElementById('userLabel').style.display = 'none';
+    document.getElementById('logoutBtn').style.display = 'none';
+    document.getElementById('loginBtn').style.display  = 'block';
+    document.getElementById('adminNav').style.display  = 'none';
+  }
+
+  // Handle ?success=1 after Stripe redirect
+  if (new URLSearchParams(location.search).get('success') === '1') {
+    history.replaceState({}, '', location.pathname);
+    document.getElementById('successNotice').style.display = 'block';
+    showView('tips');
+  }
+});
+
+// ── Navigation ────────────────────────────────────────────────────────────────
+function showView(name) {
+  if (name === 'login') { window.location.href = 'login.html'; return; }
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('view-' + name).classList.add('active');
+  const navEl = document.querySelector(`[data-view="${name}"]`);
+  if (navEl) navEl.classList.add('active');
+  if (name === 'tips' && !tipsLoaded) { tipsLoaded = true; loadTips(); }
+}
+
+// ── Results view ──────────────────────────────────────────────────────────────
+let ALL_BETS = [], ALL_SPORTS = [], ALL_MONTHS = [], chart = null;
+let activeSport = 'all', activeMonth = 'all';
 
 fetch('data.json')
   .then(r => r.json())
-  .then(data => {
-    ALL_BETS   = data.bets;
-    ALL_SPORTS = data.sports;
-    ALL_MONTHS = data.months;
-    init();
-  })
-  .catch(() => {
-    document.querySelector('.container').innerHTML =
-      '<div class="empty">data.json ei löydy.</div>';
-  });
+  .then(data => { ALL_BETS = data.bets; ALL_SPORTS = data.sports; ALL_MONTHS = data.months; initResults(); })
+  .catch(() => { document.getElementById('view-results').innerHTML = '<div class="empty">data.json ei löydy.</div>'; });
 
-function init() {
+function initResults() {
   const chips = document.getElementById('sportChips');
-
-  // "Kaikki" chip
-  const all = document.createElement('span');
-  all.className = 'chip active';
-  all.textContent = 'Kaikki';
-  all.dataset.sport = 'all';
-  all.onclick = () => selectSport('all');
-  chips.appendChild(all);
-
-  // Per-sport chips
+  const allChip = document.createElement('span');
+  allChip.className = 'chip active'; allChip.textContent = 'Kaikki'; allChip.dataset.sport = 'all';
+  allChip.onclick = () => selectSport('all'); chips.appendChild(allChip);
   ALL_SPORTS.forEach(s => {
     const el = document.createElement('span');
-    el.className = 'chip';
-    el.textContent = s;
-    el.dataset.sport = s;
-    el.onclick = () => selectSport(s);
-    chips.appendChild(el);
+    el.className = 'chip'; el.textContent = s; el.dataset.sport = s;
+    el.onclick = () => selectSport(s); chips.appendChild(el);
   });
-
-  // Month select
   const sel = document.getElementById('monthSelect');
   ALL_MONTHS.slice().reverse().forEach(ym => {
-    const opt = document.createElement('option');
-    opt.value = ym;
+    const opt = document.createElement('option'); opt.value = ym;
     const [y, m] = ym.split('-');
-    const mn = ['','Tammikuu','Helmikuu','Maaliskuu','Huhtikuu','Toukokuu','Kesäkuu',
-                 'Heinäkuu','Elokuu','Syyskuu','Lokakuu','Marraskuu','Joulukuu'];
-    opt.textContent = `${y} ${mn[parseInt(m)]}`;
-    sel.appendChild(opt);
+    const mn = ['','Tammikuu','Helmikuu','Maaliskuu','Huhtikuu','Toukokuu','Kesäkuu','Heinäkuu','Elokuu','Syyskuu','Lokakuu','Marraskuu','Joulukuu'];
+    opt.textContent = `${y} ${mn[parseInt(m)]}`; sel.appendChild(opt);
   });
-  sel.onchange = () => { activeMonth = sel.value; update(); };
-
-  update();
+  sel.onchange = () => { activeMonth = sel.value; updateResults(); };
+  updateResults();
 }
 
 function selectSport(sport) {
   activeSport = sport;
-  document.querySelectorAll('.chip').forEach(c => {
-    c.classList.toggle('active', c.dataset.sport === sport);
-  });
-  update();
+  document.querySelectorAll('.chip').forEach(c => c.classList.toggle('active', c.dataset.sport === sport));
+  updateResults();
 }
 
-function filtered() {
-  return ALL_BETS.filter(b =>
-    (activeSport === 'all' || b.sport === activeSport) &&
-    (activeMonth === 'all' || b.ym === activeMonth)
-  );
-}
+function fmt(n, d=2) { return n.toFixed(d).replace('.', ','); }
 
-function fmt(n, decimals=2) {
-  return n.toFixed(decimals).replace('.', ',');
-}
-
-function update() {
-  const bets = filtered();
-
+function updateResults() {
+  const bets = ALL_BETS.filter(b => (activeSport === 'all' || b.sport === activeSport) && (activeMonth === 'all' || b.ym === activeMonth));
   if (bets.length === 0) {
-    document.getElementById('statCount').textContent     = '0';
-    document.getElementById('statROI').textContent      = '—';
-    document.getElementById('statROI').className        = 'value neu';
-    document.getElementById('statPL').textContent       = '—';
-    document.getElementById('statPL').className         = 'value neu';
-    document.getElementById('statOdds').textContent     = '—';
-    document.getElementById('statOddsMed').textContent  = '';
-    document.getElementById('statRecord').textContent   = '—';
-    document.getElementById('statRecordSub').textContent = '';
-    updateChart([]);
-    return;
+    ['statCount','statROI','statPL','statOdds','statOddsMed','statRecord','statRecordSub'].forEach(id => document.getElementById(id).textContent = '—');
+    document.getElementById('statROI').className = document.getElementById('statPL').className = 'value neu';
+    updateChart([]); return;
   }
-
   const totalPL    = bets.reduce((s, b) => s + b.pl, 0);
   const totalStake = bets.reduce((s, b) => s + b.stake, 0);
   const roi        = totalStake > 0 ? (totalPL / totalStake) * 100 : 0;
   const avgOdds    = bets.reduce((s, b) => s + b.odds, 0) / bets.length;
-  const sortedOdds = bets.map(b => b.odds).sort((a, b) => a - b);
-  const medOdds    = sortedOdds[Math.floor(sortedOdds.length / 2)];
-  const wins   = bets.filter(b => b.result === 'W').length;
+  const medOdds    = bets.map(b => b.odds).sort((a,b)=>a-b)[Math.floor(bets.length/2)];
+  const wins = bets.filter(b => b.result === 'W').length;
   const losses = bets.filter(b => b.result === 'L').length;
   const pushes = bets.filter(b => b.result === 'P').length;
   const winPct = wins / (wins + losses) * 100;
@@ -320,16 +381,14 @@ function update() {
   const plEl = document.getElementById('statPL');
   plEl.textContent = (totalPL >= 0 ? '+' : '') + fmt(totalPL) + 'u';
   plEl.className = 'value ' + (totalPL >= 0 ? 'pos' : 'neg');
-
   const roiEl = document.getElementById('statROI');
   roiEl.textContent = (roi >= 0 ? '+' : '') + fmt(roi) + '%';
   roiEl.className = 'value ' + (roi >= 0 ? 'pos' : 'neg');
-
-  document.getElementById('statCount').textContent     = bets.length.toLocaleString('fi');
-  document.getElementById('statOdds').textContent      = fmt(avgOdds);
-  document.getElementById('statOddsMed').textContent   = `mediaani ${fmt(medOdds)}`;
-  document.getElementById('statRecord').textContent    = `${wins}–${pushes}–${losses}`;
-  document.getElementById('statRecordSub').textContent = `${fmt(winPct, 1)}% voittoaste`;
+  document.getElementById('statCount').textContent    = bets.length.toLocaleString('fi');
+  document.getElementById('statOdds').textContent     = fmt(avgOdds);
+  document.getElementById('statOddsMed').textContent  = `mediaani ${fmt(medOdds)}`;
+  document.getElementById('statRecord').textContent   = `${wins}–${pushes}–${losses}`;
+  document.getElementById('statRecordSub').textContent = `${fmt(winPct,1)}% voittoaste`;
 
   const monthMap = {};
   (activeMonth === 'all' ? ALL_MONTHS : [activeMonth]).forEach(ym => monthMap[ym] = 0);
@@ -338,40 +397,101 @@ function update() {
 }
 
 function updateChart(entries) {
-  const labels  = entries.map(([ym]) => {
-    const [y, m] = ym.split('-');
-    const mn = ['','Tam','Hel','Maa','Huh','Tou','Kes','Hei','Elo','Syy','Lok','Mar','Jou'][parseInt(m)];
-    return `${mn} ${y.slice(2)}`;
-  });
-  const values  = entries.map(([, v]) => parseFloat(v.toFixed(4)));
+  const labels  = entries.map(([ym]) => { const [y,m]=ym.split('-'); return ['','Tam','Hel','Maa','Huh','Tou','Kes','Hei','Elo','Syy','Lok','Mar','Jou'][parseInt(m)]+' '+y.slice(2); });
+  const values  = entries.map(([,v]) => parseFloat(v.toFixed(4)));
   const colors  = values.map(v => v >= 0 ? '#34d39966' : '#f8717166');
   const borders = values.map(v => v >= 0 ? '#34d399' : '#f87171');
-
-  if (chart) {
-    chart.data.labels = labels;
-    chart.data.datasets[0].data            = values;
-    chart.data.datasets[0].backgroundColor = colors;
-    chart.data.datasets[0].borderColor     = borders;
-    chart.update();
-    return;
-  }
-
-  const ctx = document.getElementById('plChart').getContext('2d');
-  chart = new Chart(ctx, {
+  if (chart) { chart.data.labels=labels; chart.data.datasets[0].data=values; chart.data.datasets[0].backgroundColor=colors; chart.data.datasets[0].borderColor=borders; chart.update(); return; }
+  chart = new Chart(document.getElementById('plChart').getContext('2d'), {
     type: 'bar',
     data: { labels, datasets: [{ data: values, backgroundColor: colors, borderColor: borders, borderWidth: 1.5, borderRadius: 4 }] },
     options: {
       responsive: true,
-      plugins: {
-        legend: { display: false },
-        tooltip: { callbacks: { label: c => (c.parsed.y >= 0 ? '+' : '') + c.parsed.y.toFixed(2).replace('.', ',') + 'u' } }
-      },
+      plugins: { legend: { display: false }, tooltip: { callbacks: { label: c => (c.parsed.y>=0?'+':'')+c.parsed.y.toFixed(2).replace('.',',')+' u' } } },
       scales: {
         x: { grid: { color: '#2e3350' }, ticks: { color: '#64748b', font: { size: 11 } } },
-        y: { grid: { color: '#2e3350' }, ticks: { color: '#64748b', font: { size: 11 }, callback: v => (v >= 0 ? '+' : '') + v.toFixed(1) + 'u' } }
+        y: { grid: { color: '#2e3350' }, ticks: { color: '#64748b', font: { size: 11 }, callback: v => (v>=0?'+':'')+v.toFixed(1)+' u' } }
       }
     }
   });
+}
+
+// ── Tips view ──────────────────────────────────────────────────────────────────
+async function loadTips() {
+  const grid = document.getElementById('tipsGrid');
+  try {
+    const snap = await db.collection('tips').where('active','==',true).orderBy('createdAt','desc').get();
+    if (snap.empty) { grid.innerHTML = '<div class="empty">Ei aktiivisia vihjeitä tällä hetkellä.</div>'; return; }
+    grid.innerHTML = '';
+    snap.forEach(doc => grid.appendChild(buildTipCard(doc.id, doc.data(), userPurchases.has(doc.id))));
+  } catch(e) { grid.innerHTML = '<div class="empty">Virhe ladattaessa vihjeitä.</div>'; }
+}
+
+function buildTipCard(tipId, tip, owned) {
+  const card = document.createElement('div');
+  card.className = 'tip-card' + (owned ? ' purchased' : '');
+  const dateStr  = tip.date  ? `<span>📅 ${tip.date}</span>` : '';
+  const oddsStr  = tip.odds  ? `<span>📈 ${tip.odds}</span>` : '';
+  const stakeStr = tip.stake ? `<span>💰 ${tip.stake}u</span>` : '';
+  const contentHtml = owned ? `<div class="tip-content">${tip.content}</div>` : '';
+  let actionHtml;
+  if (owned) actionHtml = `<div class="bought-badge">✓ Ostettu</div>`;
+  else if (currentUser) actionHtml = `<button class="buy-btn" onclick="buyTip('${tipId}', this)">Osta ${tip.price}€</button>`;
+  else actionHtml = `<button class="buy-btn" onclick="showView('login')">Kirjaudu</button>`;
+
+  card.innerHTML = `
+    <div>
+      <div class="tip-meta">
+        ${tip.sport ? `<span class="tag sport">${tip.sport}</span>` : ''}
+        ${tip.match ? `<span class="tag">${tip.match}</span>` : ''}
+      </div>
+      <div class="tip-title">${tip.title}</div>
+      <div class="tip-details">${dateStr}${oddsStr}${stakeStr}</div>
+      ${contentHtml}
+    </div>
+    <div class="tip-side">
+      <div><div class="price">${tip.price}€</div><div class="price-label">per vihje</div></div>
+      ${actionHtml}
+    </div>`;
+  return card;
+}
+
+async function buyTip(tipId, btn) {
+  if (!currentUser) { showView('login'); return; }
+  btn.disabled = true; btn.textContent = 'Odota...';
+  try {
+    const fn = functions.httpsCallable('createCheckoutSession');
+    const result = await fn({ tipId });
+    window.location.href = result.data.url;
+  } catch(e) {
+    btn.disabled = false; btn.textContent = 'Osta';
+    alert(e.message || 'Jokin meni pieleen.');
+  }
+}
+
+// ── Admin view ────────────────────────────────────────────────────────────────
+async function submitTip() {
+  const title   = document.getElementById('f_title').value.trim();
+  const sport   = document.getElementById('f_sport').value;
+  const date    = document.getElementById('f_date').value.trim();
+  const match   = document.getElementById('f_match').value.trim();
+  const odds    = parseFloat(document.getElementById('f_odds').value) || null;
+  const stake   = parseFloat(document.getElementById('f_stake').value) || null;
+  const price   = parseFloat(document.getElementById('f_price').value);
+  const content = document.getElementById('f_content').value.trim();
+  const okEl  = document.getElementById('adminOk');
+  const errEl = document.getElementById('adminErr');
+  okEl.style.display = errEl.style.display = 'none';
+  if (!title || !price || !content) { errEl.textContent = 'Täytä pakolliset kentät.'; errEl.style.display='block'; return; }
+  const btn = document.querySelector('.submit-btn');
+  btn.disabled = true; btn.textContent = 'Lisätään...';
+  try {
+    await functions.httpsCallable('addTip')({ title, sport, date, match, odds, stake, price, content });
+    okEl.style.display = 'block';
+    document.querySelectorAll('.admin-form input, .admin-form textarea').forEach(el => el.value = '');
+    tipsLoaded = false;
+  } catch(e) { errEl.textContent = e.message || 'Virhe.'; errEl.style.display = 'block'; }
+  finally { btn.disabled = false; btn.textContent = 'Lisää vihje'; }
 }
 </script>
 </body>

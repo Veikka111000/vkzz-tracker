@@ -455,7 +455,6 @@ function buildTipCard(tipId, tip, owned) {
   const card = document.createElement('div');
   card.className = 'tip-card' + (owned ? ' purchased' : '');
   const dateStr  = tip.date  ? `<span>📅 ${tip.date}</span>` : '';
-  const oddsStr  = tip.odds  ? `<span>📈 ${tip.odds}</span>` : '';
   const stakeStr = tip.stake ? `<span>💰 ${tip.stake}u</span>` : '';
   const contentHtml = owned ? `<div class="tip-content">${tip.content}</div>` : '';
 
@@ -483,7 +482,7 @@ function buildTipCard(tipId, tip, owned) {
         ${tip.match ? `<span class="tag">${tip.match}</span>` : ''}
       </div>
       <div class="tip-title">${tip.title}</div>
-      <div class="tip-details">${dateStr}${oddsStr}${stakeStr}</div>
+      <div class="tip-details">${dateStr}${stakeStr}</div>
       ${contentHtml}
     </div>
     <div class="tip-side">

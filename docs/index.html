@@ -515,9 +515,12 @@ const isMobile = () => window.innerWidth <= 600;
 function toggleSidebar() {
   const sidebar = document.getElementById('sidebar');
   const overlay = document.getElementById('overlay');
+  const mobileBtn = document.querySelector('.mobile-toggle');
   if (isMobile()) {
     sidebar.classList.toggle('open');
-    overlay.classList.toggle('show', sidebar.classList.contains('open'));
+    const isOpen = sidebar.classList.contains('open');
+    overlay.classList.toggle('show', isOpen);
+    if (mobileBtn) mobileBtn.style.display = isOpen ? 'none' : 'flex';
   } else {
     sidebar.classList.toggle('collapsed');
   }
@@ -566,6 +569,8 @@ function showView(name) {
   if (isMobile()) {
     document.getElementById('sidebar').classList.remove('open');
     document.getElementById('overlay').classList.remove('show');
+    const mobileBtn = document.querySelector('.mobile-toggle');
+    if (mobileBtn) mobileBtn.style.display = 'flex';
   }
 }
 
@@ -804,6 +809,7 @@ async function loadAdminTips() {
       <table style="width:100%;max-width:700px;border-collapse:collapse;font-size:.85rem">
         <thead><tr style="color:var(--muted);text-align:left">
           <th style="padding:6px 10px">Title</th>
+          <th style="padding:6px 10px">Match</th>
           <th style="padding:6px 10px">Sport</th>
           <th style="padding:6px 10px">Date</th>
           <th style="padding:6px 10px">Price</th>
@@ -813,7 +819,8 @@ async function loadAdminTips() {
         <tbody>${snap.docs.map(d => {
           const t = d.data();
           return `<tr style="border-top:1px solid var(--border)" id="tip-row-${d.id}">
-            <td style="padding:8px 10px;font-weight:600;max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${t.title}</td>
+            <td style="padding:8px 10px;font-weight:600;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${t.title}</td>
+            <td style="padding:8px 10px;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text)">${t.match || '—'}</td>
             <td style="padding:8px 10px">${t.sport || '—'}</td>
             <td style="padding:8px 10px">${t.date || '—'}</td>
             <td style="padding:8px 10px">${t.price}€</td>

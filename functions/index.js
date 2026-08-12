@@ -14,7 +14,7 @@ const ADMIN_UID            = process.env.ADMIN_UID;
 // ── Discount helper ───────────────────────────────────────────────────────────
 
 async function applyDiscount(code, basePrice) {
-  if (!code) return { finalPrice: basePrice, discountLabel: null };
+  if (!code) return { finalPrice: basePrice, discountLabel: null, isFree: false };
   const snap = await db.collection("discountCodes").doc(code.toUpperCase()).get();
   if (!snap.exists) throw new HttpsError("not-found", "Alennuskoodi ei kelpaa.");
   const dc = snap.data();
@@ -22,15 +22,16 @@ async function applyDiscount(code, basePrice) {
   if (dc.maxUses !== null && dc.usedCount >= dc.maxUses) {
     throw new HttpsError("resource-exhausted", "Alennuskoodi on käytetty loppuun.");
   }
-  let finalPrice;
+  let rawPrice;
   if (dc.type === "percent") {
-    finalPrice = basePrice * (1 - dc.value / 100);
+    rawPrice = basePrice * (1 - dc.value / 100);
   } else {
-    finalPrice = Math.max(0, basePrice - dc.value);
+    rawPrice = Math.max(0, basePrice - dc.value);
   }
-  finalPrice = Math.max(0.5, parseFloat(finalPrice.toFixed(2)));
+  const isFree = rawPrice <= 0;
+  const finalPrice = isFree ? 0 : Math.max(0.5, parseFloat(rawPrice.toFixed(2)));
   const label = dc.type === "percent" ? `-${dc.value}%` : `-${dc.value}€`;
-  return { finalPrice, discountLabel: label, codeDoc: snap.ref };
+  return { finalPrice, discountLabel: label, codeDoc: snap.ref, isFree };
 }
 
 // ── Create Stripe Checkout Session ────────────────────────────────────────────
@@ -50,7 +51,22 @@ exports.createCheckoutSession = onCall({ cors: true }, async (request) => {
     .where("userId", "==", request.auth.uid).where("tipId", "==", tipId).limit(1).get();
   if (!existing.empty) throw new HttpsError("already-exists", "Olet jo ostanut tämän vihjeen.");
 
-  const { finalPrice, discountLabel, codeDoc } = await applyDiscount(discountCode, tip.price);
+  const { finalPrice, discountLabel, codeDoc, isFree } = await applyDiscount(discountCode, tip.price);
+
+  // 100% discount → skip Stripe, record free purchase directly
+  if (isFree) {
+    await db.collection("purchases").add({
+      tipId,
+      userId: request.auth.uid,
+      amount: 0,
+      currency: "eur",
+      discountCode: discountCode ? discountCode.toUpperCase() : null,
+      stripeSessionId: null,
+      purchasedAt: admin.firestore.FieldValue.serverTimestamp(),
+    });
+    if (codeDoc) await codeDoc.update({ usedCount: admin.firestore.FieldValue.increment(1) });
+    return { free: true };
+  }
 
   const stripe = require("stripe")(STRIPE_SECRET);
   const productName = discountLabel

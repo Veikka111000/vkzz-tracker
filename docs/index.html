@@ -715,7 +715,14 @@ async function buyTip(tipId, basePrice, btn) {
   try {
     const fn = functions.httpsCallable('createCheckoutSession');
     const result = await fn({ tipId, discountCode: discountCode || null });
-    window.location.href = result.data.url;
+    if (result.data.free) {
+      userPurchases.add(tipId);
+      tipsLoaded = false;
+      document.getElementById('successNotice').style.display = 'block';
+      showView('tips');
+    } else {
+      window.location.href = result.data.url;
+    }
   } catch(e) {
     btn.disabled = false; btn.textContent = `Buy ${basePrice}€`;
     const msgEl = document.getElementById(`dc-msg-${tipId}`);

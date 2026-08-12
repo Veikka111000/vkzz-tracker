@@ -220,7 +220,7 @@
       });
 
       // Email notification via Formspree
-      fetch("https://formspree.io/f/xdenzgqn", {
+      await fetch("https://formspree.io/f/xdenzgqn", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ username, email, phone, time: new Date().toLocaleString("fi-FI") }),

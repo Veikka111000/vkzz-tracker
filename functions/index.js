@@ -16,11 +16,11 @@ const ADMIN_UID            = process.env.ADMIN_UID;
 async function applyDiscount(code, basePrice) {
   if (!code) return { finalPrice: basePrice, discountLabel: null, isFree: false };
   const snap = await db.collection("discountCodes").doc(code.toUpperCase()).get();
-  if (!snap.exists) throw new HttpsError("not-found", "Alennuskoodi ei kelpaa.");
+  if (!snap.exists) throw new HttpsError("not-found", "Invalid discount code.");
   const dc = snap.data();
-  if (!dc.active) throw new HttpsError("failed-precondition", "Alennuskoodi ei ole enää voimassa.");
+  if (!dc.active) throw new HttpsError("failed-precondition", "This discount code is no longer active.");
   if (dc.maxUses !== null && dc.usedCount >= dc.maxUses) {
-    throw new HttpsError("resource-exhausted", "Alennuskoodi on käytetty loppuun.");
+    throw new HttpsError("resource-exhausted", "This discount code has reached its usage limit.");
   }
   let rawPrice;
   if (dc.type === "percent") {
@@ -37,19 +37,19 @@ async function applyDiscount(code, basePrice) {
 // ── Create Stripe Checkout Session ────────────────────────────────────────────
 
 exports.createCheckoutSession = onCall({ cors: true }, async (request) => {
-  if (!request.auth) throw new HttpsError("unauthenticated", "Kirjaudu sisään ostaaksesi.");
+  if (!request.auth) throw new HttpsError("unauthenticated", "Please log in to purchase.");
 
   const { tipId, discountCode } = request.data;
   if (!tipId) throw new HttpsError("invalid-argument", "tipId puuttuu.");
 
   const tipDoc = await db.collection("tips").doc(tipId).get();
-  if (!tipDoc.exists) throw new HttpsError("not-found", "Vihje ei löydy.");
+  if (!tipDoc.exists) throw new HttpsError("not-found", "Tip not found.");
   const tip = tipDoc.data();
-  if (!tip.active) throw new HttpsError("failed-precondition", "Vihje ei ole enää saatavilla.");
+  if (!tip.active) throw new HttpsError("failed-precondition", "This tip is no longer available.");
 
   const existing = await db.collection("purchases")
     .where("userId", "==", request.auth.uid).where("tipId", "==", tipId).limit(1).get();
-  if (!existing.empty) throw new HttpsError("already-exists", "Olet jo ostanut tämän vihjeen.");
+  if (!existing.empty) throw new HttpsError("already-exists", "You have already purchased this tip.");
 
   const { finalPrice, discountLabel, codeDoc, isFree } = await applyDiscount(discountCode, tip.price);
 

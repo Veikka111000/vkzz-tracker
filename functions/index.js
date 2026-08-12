@@ -74,7 +74,7 @@ exports.createCheckoutSession = onCall({ cors: true }, async (request) => {
     : tip.title;
 
   const session = await stripe.checkout.sessions.create({
-    automatic_payment_methods: { enabled: true },
+    payment_method_types: ["card"],
     line_items: [{
       price_data: {
         currency: "eur",

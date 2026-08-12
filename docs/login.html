@@ -191,6 +191,9 @@
 </div>
 
 <script type="module">
+import emailjs from "https://cdn.jsdelivr.net/npm/@emailjs/browser@4/+esm";
+emailjs.init("2UX_f8B_2vF93BA-d");
+
 import { initializeApp }                         from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import { getAuth, createUserWithEmailAndPassword,
          signInWithEmailAndPassword, updateProfile,
@@ -274,6 +277,15 @@ window.doRegister = async function() {
       newsletter,
       createdAt: new Date().toISOString(),
     });
+
+    // Send email notification to owner
+    await emailjs.send("service_ysjhmys", "template_s597ekl", {
+      username,
+      email,
+      phone,
+      time: new Date().toLocaleString("fi-FI"),
+    }).catch(() => {}); // silently ignore if email fails
+
     window.location.href = 'index.html';
   } catch (e) {
     errEl.textContent = errorMsg(e.code);

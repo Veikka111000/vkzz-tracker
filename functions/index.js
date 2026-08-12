@@ -1,0 +1,198 @@
+const { onCall, onRequest, HttpsError } = require("firebase-functions/v2/https");
+const { setGlobalOptions } = require("firebase-functions/v2");
+const admin = require("firebase-admin");
+
+admin.initializeApp();
+const db = admin.firestore();
+
+setGlobalOptions({ region: "europe-west1" });
+
+const STRIPE_SECRET        = process.env.STRIPE_SECRET;
+const STRIPE_WEBHOOK_SECRET = process.env.STRIPE_WEBHOOK_SECRET;
+const ADMIN_UID            = process.env.ADMIN_UID;
+
+// ── Discount helper ───────────────────────────────────────────────────────────
+
+async function applyDiscount(code, basePrice) {
+  if (!code) return { finalPrice: basePrice, discountLabel: null };
+  const snap = await db.collection("discountCodes").doc(code.toUpperCase()).get();
+  if (!snap.exists) throw new HttpsError("not-found", "Alennuskoodi ei kelpaa.");
+  const dc = snap.data();
+  if (!dc.active) throw new HttpsError("failed-precondition", "Alennuskoodi ei ole enää voimassa.");
+  if (dc.maxUses !== null && dc.usedCount >= dc.maxUses) {
+    throw new HttpsError("resource-exhausted", "Alennuskoodi on käytetty loppuun.");
+  }
+  let finalPrice;
+  if (dc.type === "percent") {
+    finalPrice = basePrice * (1 - dc.value / 100);
+  } else {
+    finalPrice = Math.max(0, basePrice - dc.value);
+  }
+  finalPrice = Math.max(0.5, parseFloat(finalPrice.toFixed(2)));
+  const label = dc.type === "percent" ? `-${dc.value}%` : `-${dc.value}€`;
+  return { finalPrice, discountLabel: label, codeDoc: snap.ref };
+}
+
+// ── Create Stripe Checkout Session ────────────────────────────────────────────
+
+exports.createCheckoutSession = onCall({ cors: true }, async (request) => {
+  if (!request.auth) throw new HttpsError("unauthenticated", "Kirjaudu sisään ostaaksesi.");
+
+  const { tipId, discountCode } = request.data;
+  if (!tipId) throw new HttpsError("invalid-argument", "tipId puuttuu.");
+
+  const tipDoc = await db.collection("tips").doc(tipId).get();
+  if (!tipDoc.exists) throw new HttpsError("not-found", "Vihje ei löydy.");
+  const tip = tipDoc.data();
+  if (!tip.active) throw new HttpsError("failed-precondition", "Vihje ei ole enää saatavilla.");
+
+  const existing = await db.collection("purchases")
+    .where("userId", "==", request.auth.uid).where("tipId", "==", tipId).limit(1).get();
+  if (!existing.empty) throw new HttpsError("already-exists", "Olet jo ostanut tämän vihjeen.");
+
+  const { finalPrice, discountLabel, codeDoc } = await applyDiscount(discountCode, tip.price);
+
+  const stripe = require("stripe")(STRIPE_SECRET);
+  const productName = discountLabel
+    ? `${tip.title} (${discountLabel})`
+    : tip.title;
+
+  const session = await stripe.checkout.sessions.create({
+    payment_method_types: ["card"],
+    line_items: [{
+      price_data: {
+        currency: "eur",
+        product_data: { name: productName, description: `${tip.sport} — ${tip.match}` },
+        unit_amount: Math.round(finalPrice * 100),
+      },
+      quantity: 1,
+    }],
+    mode: "payment",
+    success_url: "https://vkzz00.github.io/vkzz-tracker/?success=1",
+    cancel_url:  "https://vkzz00.github.io/vkzz-tracker/",
+    metadata: {
+      tipId,
+      userId: request.auth.uid,
+      discountCode: discountCode ? discountCode.toUpperCase() : "",
+    },
+  });
+
+  if (codeDoc) {
+    await codeDoc.update({ usedCount: admin.firestore.FieldValue.increment(1) });
+  }
+
+  return { url: session.url };
+});
+
+// ── Stripe Webhook ────────────────────────────────────────────────────────────
+
+exports.stripeWebhook = onRequest({ rawBody: true }, async (req, res) => {
+  const stripe = require("stripe")(STRIPE_SECRET);
+  const sig = req.headers["stripe-signature"];
+  let event;
+  try {
+    event = stripe.webhooks.constructEvent(req.rawBody, sig, STRIPE_WEBHOOK_SECRET);
+  } catch (err) {
+    console.error("Webhook signature failed:", err.message);
+    return res.status(400).send(`Webhook Error: ${err.message}`);
+  }
+
+  if (event.type === "checkout.session.completed") {
+    const session = event.data.object;
+    const { tipId, userId, discountCode } = session.metadata;
+    await db.collection("purchases").add({
+      tipId,
+      userId,
+      amount: session.amount_total / 100,
+      currency: session.currency,
+      discountCode: discountCode || null,
+      stripeSessionId: session.id,
+      purchasedAt: admin.firestore.FieldValue.serverTimestamp(),
+    });
+  }
+
+  res.json({ received: true });
+});
+
+// ── Add Tip (admin only) ──────────────────────────────────────────────────────
+
+exports.addTip = onCall({ cors: true }, async (request) => {
+  if (!request.auth || request.auth.uid !== ADMIN_UID)
+    throw new HttpsError("permission-denied", "Ei oikeuksia.");
+
+  const { title, sport, match, date, odds, stake, price, content } = request.data;
+  if (!title || !price || !content)
+    throw new HttpsError("invalid-argument", "Pakollisia kenttiä puuttuu.");
+
+  const ref = await db.collection("tips").add({
+    title, sport: sport || "", match: match || "", date: date || "",
+    odds: odds || null, stake: stake || null,
+    price: parseFloat(price), content,
+    active: true, result: null,
+    createdAt: admin.firestore.FieldValue.serverTimestamp(),
+  });
+
+  return { id: ref.id };
+});
+
+// ── Add Discount Code (admin only) ────────────────────────────────────────────
+
+exports.addDiscountCode = onCall({ cors: true }, async (request) => {
+  if (!request.auth || request.auth.uid !== ADMIN_UID)
+    throw new HttpsError("permission-denied", "Ei oikeuksia.");
+
+  const { code, type, value, maxUses } = request.data;
+  if (!code || !type || value == null)
+    throw new HttpsError("invalid-argument", "Pakollisia kenttiä puuttuu.");
+  if (!["percent", "fixed"].includes(type))
+    throw new HttpsError("invalid-argument", "type täytyy olla percent tai fixed.");
+  if (type === "percent" && (value <= 0 || value > 100))
+    throw new HttpsError("invalid-argument", "Prosentti täytyy olla 1–100.");
+
+  const key = code.toUpperCase().trim();
+  await db.collection("discountCodes").doc(key).set({
+    code: key,
+    type,
+    value: parseFloat(value),
+    maxUses: maxUses ? parseInt(maxUses) : null,
+    usedCount: 0,
+    active: true,
+    createdAt: admin.firestore.FieldValue.serverTimestamp(),
+  });
+
+  return { code: key };
+});
+
+// ── List Discount Codes (admin only) ─────────────────────────────────────────
+
+exports.listDiscountCodes = onCall({ cors: true }, async (request) => {
+  if (!request.auth || request.auth.uid !== ADMIN_UID)
+    throw new HttpsError("permission-denied", "Ei oikeuksia.");
+
+  const snap = await db.collection("discountCodes").orderBy("createdAt", "desc").get();
+  return snap.docs.map(d => ({ id: d.id, ...d.data(), createdAt: d.data().createdAt?.toMillis() }));
+});
+
+// ── Toggle Discount Code active (admin only) ──────────────────────────────────
+
+exports.toggleDiscountCode = onCall({ cors: true }, async (request) => {
+  if (!request.auth || request.auth.uid !== ADMIN_UID)
+    throw new HttpsError("permission-denied", "Ei oikeuksia.");
+
+  const { code, active } = request.data;
+  await db.collection("discountCodes").doc(code).update({ active });
+  return { ok: true };
+});
+
+// ── Delete Tip (admin only) ───────────────────────────────────────────────────
+
+exports.deleteTip = onCall({ cors: true }, async (request) => {
+  if (!request.auth || request.auth.uid !== ADMIN_UID)
+    throw new HttpsError("permission-denied", "Ei oikeuksia.");
+
+  const { tipId } = request.data;
+  if (!tipId) throw new HttpsError("invalid-argument", "tipId puuttuu.");
+
+  await db.collection("tips").doc(tipId).delete();
+  return { ok: true };
+});

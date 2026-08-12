@@ -44,6 +44,24 @@
     display: flex; min-height: 100vh;
   }
 
+  /* ── Toggle button ── */
+  .sidebar-toggle {
+    position: fixed; top: 16px; left: 16px; z-index: 200;
+    width: 36px; height: 36px; border-radius: 8px;
+    background: var(--bg2); border: 1px solid var(--border);
+    color: var(--text); font-size: 1.1rem; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: background .15s;
+  }
+  .sidebar-toggle:hover { background: var(--bg3); }
+
+  /* ── Overlay ── */
+  .sidebar-overlay {
+    display: none; position: fixed; inset: 0; z-index: 150;
+    background: rgba(0,0,0,.5);
+  }
+  .sidebar-overlay.show { display: block; }
+
   /* ── Sidebar ── */
   .sidebar {
     width: var(--sidebar);
@@ -52,7 +70,12 @@
     display: flex; flex-direction: column;
     position: fixed; top: 0; left: 0; bottom: 0;
     padding: 24px 0;
+    z-index: 160;
+    transform: translateX(0);
+    transition: transform .22s ease;
   }
+  .sidebar.collapsed { transform: translateX(calc(-1 * var(--sidebar))); }
+
   .sidebar-brand {
     font-size: 1.4rem; font-weight: 700; letter-spacing: -0.02em;
     padding: 0 20px 24px; border-bottom: 1px solid var(--border);
@@ -85,8 +108,19 @@
   /* ── Main ── */
   .main {
     margin-left: var(--sidebar);
-    flex: 1; padding: 32px 28px;
+    flex: 1; padding: 32px 28px; padding-top: 64px;
     max-width: calc(100vw - var(--sidebar));
+    transition: margin-left .22s ease, max-width .22s ease;
+  }
+  .main.expanded {
+    margin-left: 0;
+    max-width: 100vw;
+  }
+
+  @media (max-width: 600px) {
+    .main { padding: 64px 16px 24px; margin-left: 0; max-width: 100vw; }
+    .sidebar { transform: translateX(calc(-1 * var(--sidebar))); }
+    .sidebar.open { transform: translateX(0); }
   }
 
   /* ── Views ── */
@@ -192,8 +226,11 @@
 </head>
 <body>
 
+<button class="sidebar-toggle" onclick="toggleSidebar()">☰</button>
+<div class="sidebar-overlay" id="overlay" onclick="toggleSidebar()"></div>
+
 <!-- Sidebar -->
-<aside class="sidebar">
+<aside class="sidebar" id="sidebar">
   <div class="sidebar-brand">VkZz</div>
   <nav class="sidebar-nav">
     <div class="nav-item active" data-view="results" onclick="showView('results')">
@@ -305,6 +342,25 @@
 </main>
 
 <script>
+// ── Sidebar toggle ────────────────────────────────────────────────────────────
+const isMobile = () => window.innerWidth <= 600;
+
+function toggleSidebar() {
+  const sidebar = document.getElementById('sidebar');
+  const main    = document.querySelector('.main');
+  const overlay = document.getElementById('overlay');
+  if (isMobile()) {
+    sidebar.classList.toggle('open');
+    overlay.classList.toggle('show', sidebar.classList.contains('open'));
+  } else {
+    sidebar.classList.toggle('collapsed');
+    main.classList.toggle('expanded', sidebar.classList.contains('collapsed'));
+  }
+}
+
+// On mobile start collapsed
+if (isMobile()) document.getElementById('sidebar').classList.remove('open');
+
 // ── Auth ─────────────────────────────────────────────────────────────────────
 let currentUser = null;
 let userPurchases = new Set();
@@ -345,6 +401,11 @@ function showView(name) {
   if (navEl) navEl.classList.add('active');
   if (name === 'tips' && !tipsLoaded) { tipsLoaded = true; loadTips(); }
   if (name === 'admin') loadDiscountCodes();
+  // Close sidebar on mobile after navigation
+  if (isMobile()) {
+    document.getElementById('sidebar').classList.remove('open');
+    document.getElementById('overlay').classList.remove('show');
+  }
 }
 
 // ── Results view ──────────────────────────────────────────────────────────────

@@ -206,6 +206,53 @@
     padding: 12px 16px; font-size: 0.85rem; color: var(--green); margin-bottom: 22px; display: none;
   }
 
+  /* ── Login view ── */
+  .login-box {
+    max-width: 420px; margin: 40px auto;
+    background: var(--bg2); border: 1px solid var(--border);
+    border-radius: 14px; padding: 36px 32px;
+  }
+  .login-box h2 { font-size: 1.2rem; font-weight: 700; margin-bottom: 24px; }
+  .auth-tabs { display: flex; margin-bottom: 28px; border-bottom: 1px solid var(--border); }
+  .auth-tab {
+    padding: 8px 20px; cursor: pointer; font-size: 0.9rem;
+    color: var(--muted); border-bottom: 2px solid transparent;
+    margin-bottom: -1px; transition: all .15s;
+  }
+  .auth-tab.active { color: var(--text); border-bottom-color: var(--accent); }
+  .auth-form { display: flex; flex-direction: column; gap: 14px; }
+  .auth-form.hidden { display: none; }
+  .auth-form label { font-size: 0.8rem; color: var(--muted); display: block; margin-bottom: 5px; }
+  .auth-form input[type="text"],
+  .auth-form input[type="email"],
+  .auth-form input[type="tel"],
+  .auth-form input[type="password"] {
+    width: 100%; background: var(--bg3); border: 1px solid var(--border);
+    border-radius: 8px; color: var(--text); padding: 10px 12px;
+    font-size: 0.9rem; outline: none; transition: border-color .15s; font-family: inherit;
+  }
+  .auth-form input:focus { border-color: var(--accent); }
+  .auth-hint { font-size: 0.76rem; color: var(--muted); margin-top: 3px; }
+  .auth-err  { font-size: 0.76rem; color: var(--red); margin-top: 3px; display: none; }
+  .auth-err.show { display: block; }
+  .check-row { display: flex; align-items: flex-start; gap: 10px; padding: 2px 0; }
+  .check-row input[type="checkbox"] { width: 17px; height: 17px; margin-top: 1px; accent-color: var(--accent); flex-shrink: 0; cursor: pointer; }
+  .check-row span { font-size: 0.84rem; color: var(--muted); line-height: 1.4; cursor: pointer; }
+  .auth-btn-submit {
+    width: 100%; padding: 11px; background: var(--accent);
+    color: #fff; border: none; border-radius: 8px;
+    font-size: 0.95rem; font-weight: 600; cursor: pointer;
+    transition: opacity .15s; margin-top: 4px; font-family: inherit;
+  }
+  .auth-btn-submit:hover { opacity: .88; }
+  .auth-btn-submit:disabled { opacity: .5; cursor: not-allowed; }
+  .global-err {
+    background: #f8717122; border: 1px solid var(--red);
+    border-radius: 8px; padding: 10px 12px;
+    font-size: 0.84rem; color: var(--red); display: none;
+  }
+  .global-err.show { display: block; }
+
   /* ── Admin view ── */
   .admin-form { max-width: 600px; display: flex; flex-direction: column; gap: 16px; }
   .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
@@ -349,8 +396,62 @@
     <div id="dcList"><div class="empty" style="padding:20px">Loading codes...</div></div>
   </div>
 
-  <!-- Login redirect placeholder -->
-  <div class="view" id="view-login"></div>
+  <!-- Login / Register -->
+  <div class="view" id="view-login">
+    <div class="login-box">
+      <h2>Welcome to VkZz</h2>
+      <div class="auth-tabs">
+        <div class="auth-tab active" onclick="switchAuthTab('login')">Log in</div>
+        <div class="auth-tab" onclick="switchAuthTab('register')">Create account</div>
+      </div>
+
+      <!-- Login form -->
+      <form class="auth-form" id="form-login" onsubmit="doLogin(event)">
+        <div>
+          <label>Email</label>
+          <input type="email" id="login-email" required autocomplete="email">
+        </div>
+        <div>
+          <label>Password</label>
+          <input type="password" id="login-password" required autocomplete="current-password">
+        </div>
+        <div class="global-err" id="login-err"></div>
+        <button type="submit" class="auth-btn-submit" id="login-submit">Log in</button>
+      </form>
+
+      <!-- Register form -->
+      <form class="auth-form hidden" id="form-register" onsubmit="doRegister(event)">
+        <div>
+          <label>Username</label>
+          <input type="text" id="reg-name" required autocomplete="name">
+        </div>
+        <div>
+          <label>Email</label>
+          <input type="email" id="reg-email" required autocomplete="email">
+        </div>
+        <div>
+          <label>Phone (optional)</label>
+          <input type="tel" id="reg-phone" autocomplete="tel">
+        </div>
+        <div>
+          <label>Password</label>
+          <input type="password" id="reg-password" required autocomplete="new-password">
+          <div class="auth-hint">At least 6 characters</div>
+        </div>
+        <div>
+          <label>Confirm password</label>
+          <input type="password" id="reg-password2" required autocomplete="new-password">
+          <div class="auth-err" id="reg-pw-err">Passwords do not match.</div>
+        </div>
+        <div class="check-row">
+          <input type="checkbox" id="reg-newsletter">
+          <span onclick="document.getElementById('reg-newsletter').click()">I want to receive tips and updates by email</span>
+        </div>
+        <div class="global-err" id="reg-err"></div>
+        <button type="submit" class="auth-btn-submit" id="reg-submit">Create account</button>
+      </form>
+    </div>
+  </div>
 
 </main>
 
@@ -401,7 +502,6 @@ auth.onAuthStateChanged(async user => {
 
 // ── Navigation ────────────────────────────────────────────────────────────────
 function showView(name) {
-  if (name === 'login') { window.location.href = 'login.html'; return; }
   document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
   document.getElementById('view-' + name).classList.add('active');
@@ -640,6 +740,78 @@ async function toggleCode(code, active) {
     await functions.httpsCallable('toggleDiscountCode')({ code, active });
     loadDiscountCodes();
   } catch(e) { alert(e.message); }
+}
+
+// ── Login / Register view ──────────────────────────────────────────────────────
+function switchAuthTab(tab) {
+  document.querySelectorAll('.auth-tab').forEach((el, i) => {
+    el.classList.toggle('active', (i === 0 && tab === 'login') || (i === 1 && tab === 'register'));
+  });
+  document.getElementById('form-login').classList.toggle('hidden', tab !== 'login');
+  document.getElementById('form-register').classList.toggle('hidden', tab !== 'register');
+}
+
+async function doLogin(e) {
+  e.preventDefault();
+  const email = document.getElementById('login-email').value.trim();
+  const pw    = document.getElementById('login-password').value;
+  const errEl = document.getElementById('login-err');
+  const btn   = document.getElementById('login-submit');
+  errEl.classList.remove('show');
+  btn.disabled = true; btn.textContent = 'Logging in...';
+  try {
+    await auth.signInWithEmailAndPassword(email, pw);
+    showView('results');
+  } catch(err) {
+    errEl.textContent = authErrMsg(err.code);
+    errEl.classList.add('show');
+  } finally {
+    btn.disabled = false; btn.textContent = 'Log in';
+  }
+}
+
+async function doRegister(e) {
+  e.preventDefault();
+  const name  = document.getElementById('reg-name').value.trim();
+  const email = document.getElementById('reg-email').value.trim();
+  const phone = document.getElementById('reg-phone').value.trim();
+  const pw    = document.getElementById('reg-password').value;
+  const pw2   = document.getElementById('reg-password2').value;
+  const newsletter = document.getElementById('reg-newsletter').checked;
+  const errEl = document.getElementById('reg-err');
+  const pwErr = document.getElementById('reg-pw-err');
+  errEl.classList.remove('show'); pwErr.classList.remove('show');
+  if (pw !== pw2) { pwErr.classList.add('show'); return; }
+  const btn = document.getElementById('reg-submit');
+  btn.disabled = true; btn.textContent = 'Creating account...';
+  try {
+    const cred = await auth.createUserWithEmailAndPassword(email, pw);
+    await cred.user.updateProfile({ displayName: name });
+    await db.collection('users').doc(cred.user.uid).set({
+      displayName: name, email, phone: phone || null,
+      newsletter, createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+    });
+    showView('results');
+  } catch(err) {
+    errEl.textContent = authErrMsg(err.code);
+    errEl.classList.add('show');
+  } finally {
+    btn.disabled = false; btn.textContent = 'Create account';
+  }
+}
+
+function authErrMsg(code) {
+  const map = {
+    'auth/invalid-email':          'Invalid email address.',
+    'auth/user-not-found':         'No account found with this email.',
+    'auth/wrong-password':         'Incorrect password.',
+    'auth/invalid-credential':     'Incorrect email or password.',
+    'auth/email-already-in-use':   'An account with this email already exists.',
+    'auth/weak-password':          'Password must be at least 6 characters.',
+    'auth/too-many-requests':      'Too many attempts. Please try again later.',
+    'auth/network-request-failed': 'Network error. Check your connection.',
+  };
+  return map[code] || 'Something went wrong. Please try again.';
 }
 
 async function submitTip() {

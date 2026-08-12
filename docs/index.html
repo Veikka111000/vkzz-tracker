@@ -112,6 +112,16 @@
   }
   .auth-btn:hover { border-color: var(--accent); color: var(--accent); }
   .auth-btn.logout:hover { border-color: var(--red); color: var(--red); }
+  .tg-btn {
+    display: flex; align-items: center; gap: 7px;
+    padding: 8px 12px; border-radius: 8px; font-size: 0.82rem;
+    border: 1px solid var(--border); color: var(--muted);
+    text-decoration: none; transition: all .15s;
+  }
+  .tg-btn:hover { border-color: #29a8ea; color: #29a8ea; }
+  .sidebar.collapsed .tg-btn span,
+  .sidebar.collapsed .tg-btn { justify-content: center; }
+  .sidebar.collapsed .tg-btn svg { margin: 0; }
 
   /* ── Main ── */
   .main {
@@ -314,6 +324,10 @@
     </div>
   </nav>
   <div class="sidebar-footer">
+    <a class="tg-btn" href="https://t.me/vkzztipping" target="_blank" rel="noopener">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.894 8.221-1.97 9.28c-.145.658-.537.818-1.084.508l-3-2.21-1.447 1.394c-.16.16-.295.295-.605.295l.213-3.053 5.56-5.023c.242-.213-.054-.333-.373-.12L8.32 14.617l-2.96-.924c-.643-.204-.657-.643.136-.953l11.57-4.461c.537-.194 1.006.131.828.942z"/></svg>
+      Telegram
+    </a>
     <div class="user-info" id="userLabel" style="display:none"></div>
     <button class="auth-btn"        id="loginBtn"  onclick="showView('login')"  style="display:none">Log in</button>
     <button class="auth-btn logout" id="logoutBtn" onclick="auth.signOut()"     style="display:none">Log out</button>

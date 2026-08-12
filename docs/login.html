@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="fi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kirjaudu — Betting Tracker</title>
+<style>
+  :root {
+    --bg:     #0f1117;
+    --bg2:    #1a1d27;
+    --bg3:    #22263a;
+    --border: #2e3350;
+    --accent: #4f8ef7;
+    --green:  #34d399;
+    --red:    #f87171;
+    --text:   #e2e8f0;
+    --muted:  #64748b;
+    --radius: 10px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Inter', system-ui, sans-serif;
+    font-size: 15px;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+  }
+
+  .card {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 36px 32px;
+    width: 100%;
+    max-width: 420px;
+  }
+
+  h1 { font-size: 1.4rem; font-weight: 700; letter-spacing: -0.02em; margin-bottom: 24px; }
+
+  /* Tabs */
+  .tabs { display: flex; gap: 0; margin-bottom: 28px; border-bottom: 1px solid var(--border); }
+  .tab {
+    padding: 8px 20px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    color: var(--muted);
+    border-bottom: 2px solid transparent;
+    margin-bottom: -1px;
+    transition: all .15s;
+  }
+  .tab.active { color: var(--text); border-bottom-color: var(--accent); }
+
+  /* Form */
+  .form { display: flex; flex-direction: column; gap: 14px; }
+  .form.hidden { display: none; }
+
+  label { font-size: 0.8rem; color: var(--muted); display: block; margin-bottom: 5px; }
+
+  input[type="text"],
+  input[type="email"],
+  input[type="tel"],
+  input[type="password"] {
+    width: 100%;
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text);
+    padding: 10px 12px;
+    font-size: 0.9rem;
+    outline: none;
+    transition: border-color .15s;
+  }
+  input:focus { border-color: var(--accent); }
+  input.error { border-color: var(--red); }
+
+  .hint { font-size: 0.76rem; color: var(--muted); margin-top: 3px; }
+  .err  { font-size: 0.76rem; color: var(--red);   margin-top: 3px; display: none; }
+  .err.show { display: block; }
+
+  /* Checkbox */
+  .check-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 2px 0;
+  }
+  .check-row input[type="checkbox"] {
+    width: 17px;
+    height: 17px;
+    margin-top: 1px;
+    accent-color: var(--accent);
+    flex-shrink: 0;
+    cursor: pointer;
+  }
+  .check-row span { font-size: 0.84rem; color: var(--muted); line-height: 1.4; cursor: pointer; }
+
+  /* Button */
+  .btn {
+    width: 100%;
+    padding: 11px;
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    font-size: 0.95rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: opacity .15s;
+    margin-top: 4px;
+  }
+  .btn:hover { opacity: 0.88; }
+  .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  .global-err {
+    background: #f8717122;
+    border: 1px solid var(--red);
+    border-radius: 8px;
+    padding: 10px 12px;
+    font-size: 0.84rem;
+    color: var(--red);
+    display: none;
+  }
+  .global-err.show { display: block; }
+</style>
+</head>
+<body>
+
+<div class="card">
+  <h1>Betting Tracker</h1>
+
+  <div class="tabs">
+    <div class="tab active" onclick="switchTab('login')">Kirjaudu</div>
+    <div class="tab"        onclick="switchTab('register')">Luo tili</div>
+  </div>
+
+  <!-- Login -->
+  <div class="form" id="loginForm">
+    <div>
+      <label>Sähköposti</label>
+      <input type="email" id="l_email" placeholder="sinä@esimerkki.fi">
+    </div>
+    <div>
+      <label>Salasana</label>
+      <input type="password" id="l_pass" placeholder="••••••••">
+    </div>
+    <div class="global-err" id="loginErr"></div>
+    <button class="btn" onclick="doLogin()">Kirjaudu sisään</button>
+  </div>
+
+  <!-- Register -->
+  <div class="form hidden" id="registerForm">
+    <div>
+      <label>Käyttäjätunnus</label>
+      <input type="text" id="r_user" placeholder="käyttäjänimi">
+      <div class="err" id="r_user_err">Pakollinen kenttä</div>
+    </div>
+    <div>
+      <label>Sähköposti</label>
+      <input type="email" id="r_email" placeholder="sinä@esimerkki.fi">
+      <div class="err" id="r_email_err">Tarkista sähköpostiosoite</div>
+    </div>
+    <div>
+      <label>Puhelinnumero</label>
+      <input type="tel" id="r_phone" placeholder="+358 40 123 4567">
+      <div class="err" id="r_phone_err">Pakollinen kenttä</div>
+    </div>
+    <div>
+      <label>Salasana</label>
+      <input type="password" id="r_pass" placeholder="Vähintään 8 merkkiä">
+      <div class="hint">Vähintään 8 merkkiä</div>
+      <div class="err" id="r_pass_err">Salasanan täytyy olla vähintään 8 merkkiä</div>
+    </div>
+    <div>
+      <label>Vahvista salasana</label>
+      <input type="password" id="r_pass2" placeholder="••••••••">
+      <div class="err" id="r_pass2_err">Salasanat eivät täsmää</div>
+    </div>
+    <div class="check-row">
+      <input type="checkbox" id="r_newsletter">
+      <span onclick="document.getElementById('r_newsletter').click()">
+        Haluan saada sähköpostiini uutisia ja päivityksiä
+      </span>
+    </div>
+    <div class="global-err" id="registerErr"></div>
+    <button class="btn" onclick="doRegister()">Luo tili</button>
+  </div>
+</div>
+
+<script type="module">
+import { initializeApp }                         from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getAuth, createUserWithEmailAndPassword,
+         signInWithEmailAndPassword, updateProfile,
+         onAuthStateChanged }                    from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+import { getFirestore, doc, setDoc }             from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey:            "AIzaSyDJDAeuom8ynSHkbOfCM4g4ZpXg1an2OOI",
+  authDomain:        "vkzz-tracker.firebaseapp.com",
+  projectId:         "vkzz-tracker",
+  storageBucket:     "vkzz-tracker.firebasestorage.app",
+  messagingSenderId: "113351713339",
+  appId:             "1:113351713339:web:1ae9ba86b732237236b21e",
+};
+
+const app  = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db   = getFirestore(app);
+
+// Redirect if already logged in
+onAuthStateChanged(auth, user => {
+  if (user) window.location.href = 'index.html';
+});
+
+// ── Tab switch ────────────────────────────────────────────────────────────────
+window.switchTab = function(tab) {
+  document.querySelectorAll('.tab').forEach((t, i) =>
+    t.classList.toggle('active', (tab === 'login' ? i === 0 : i === 1)));
+  document.getElementById('loginForm').classList.toggle('hidden', tab !== 'login');
+  document.getElementById('registerForm').classList.toggle('hidden', tab !== 'register');
+};
+
+// ── Login ─────────────────────────────────────────────────────────────────────
+window.doLogin = async function() {
+  const email = document.getElementById('l_email').value.trim();
+  const pass  = document.getElementById('l_pass').value;
+  const errEl = document.getElementById('loginErr');
+  errEl.classList.remove('show');
+
+  try {
+    await signInWithEmailAndPassword(auth, email, pass);
+    window.location.href = 'index.html';
+  } catch (e) {
+    errEl.textContent = errorMsg(e.code);
+    errEl.classList.add('show');
+  }
+};
+
+// ── Register ──────────────────────────────────────────────────────────────────
+window.doRegister = async function() {
+  const username   = document.getElementById('r_user').value.trim();
+  const email      = document.getElementById('r_email').value.trim();
+  const phone      = document.getElementById('r_phone').value.trim();
+  const pass       = document.getElementById('r_pass').value;
+  const pass2      = document.getElementById('r_pass2').value;
+  const newsletter = document.getElementById('r_newsletter').checked;
+  const errEl      = document.getElementById('registerErr');
+  errEl.classList.remove('show');
+
+  let ok = true;
+  const setErr = (id, show) => {
+    document.getElementById(id).classList.toggle('show', show);
+    if (show) ok = false;
+  };
+
+  setErr('r_user_err',  !username);
+  setErr('r_email_err', !email || !email.includes('@'));
+  setErr('r_phone_err', !phone);
+  setErr('r_pass_err',  pass.length < 8);
+  setErr('r_pass2_err', pass !== pass2);
+
+  if (!ok) return;
+
+  try {
+    const cred = await createUserWithEmailAndPassword(auth, email, pass);
+    await updateProfile(cred.user, { displayName: username });
+    await setDoc(doc(db, 'users', cred.user.uid), {
+      username,
+      email,
+      phone,
+      newsletter,
+      createdAt: new Date().toISOString(),
+    });
+    window.location.href = 'index.html';
+  } catch (e) {
+    errEl.textContent = errorMsg(e.code);
+    errEl.classList.add('show');
+  }
+};
+
+function errorMsg(code) {
+  const map = {
+    'auth/invalid-email':           'Virheellinen sähköpostiosoite.',
+    'auth/user-not-found':          'Käyttäjää ei löydy.',
+    'auth/wrong-password':          'Väärä salasana.',
+    'auth/invalid-credential':      'Väärä sähköposti tai salasana.',
+    'auth/email-already-in-use':    'Sähköposti on jo käytössä.',
+    'auth/weak-password':           'Salasana on liian heikko.',
+    'auth/too-many-requests':       'Liian monta yritystä. Yritä hetken päästä uudelleen.',
+  };
+  return map[code] || 'Jokin meni pieleen. Yritä uudelleen.';
+}
+</script>
+</body>
+</html>

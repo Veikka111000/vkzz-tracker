@@ -5,6 +5,32 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Betting Tracker</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script type="module">
+import { initializeApp }          from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+
+const app  = initializeApp({
+  apiKey:            "AIzaSyDJDAeuom8ynSHkbOfCM4g4ZpXg1an2OOI",
+  authDomain:        "vkzz-tracker.firebaseapp.com",
+  projectId:         "vkzz-tracker",
+  storageBucket:     "vkzz-tracker.firebasestorage.app",
+  messagingSenderId: "113351713339",
+  appId:             "1:113351713339:web:1ae9ba86b732237236b21e",
+});
+const auth = getAuth(app);
+
+onAuthStateChanged(auth, user => {
+  if (!user) {
+    window.location.href = 'login.html';
+    return;
+  }
+  const name = user.displayName || user.email;
+  document.getElementById('userLabel').textContent = name;
+  document.getElementById('authBar').style.display = 'flex';
+});
+
+window._signOut = () => signOut(auth).then(() => window.location.href = 'login.html');
+</script>
 <style>
   :root {
     --bg:      #0f1117;
@@ -25,8 +51,21 @@
     padding: 28px 32px 20px;
     border-bottom: 1px solid var(--border);
   }
+  header { display: flex; align-items: center; justify-content: space-between; }
   header h1 { font-size: 1.5rem; font-weight: 700; letter-spacing: -0.02em; }
-  header p  { color: var(--muted); font-size: 0.85rem; margin-top: 4px; }
+  #authBar { display: none; align-items: center; gap: 12px; }
+  #userLabel { font-size: 0.85rem; color: var(--muted); }
+  .logout-btn {
+    padding: 6px 14px;
+    background: transparent;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--muted);
+    font-size: 0.82rem;
+    cursor: pointer;
+    transition: all .15s;
+  }
+  .logout-btn:hover { border-color: var(--red); color: var(--red); }
 
   .container { max-width: 1100px; margin: 0 auto; padding: 28px 24px; }
 
@@ -110,6 +149,10 @@
 
 <header>
   <h1>Betting Tracker</h1>
+  <div id="authBar">
+    <span id="userLabel"></span>
+    <button class="logout-btn" onclick="_signOut()">Kirjaudu ulos</button>
+  </div>
 </header>
 
 <div class="container">

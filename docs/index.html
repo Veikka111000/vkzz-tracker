@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="fi">
+<html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -241,10 +241,10 @@
   </div>
   <nav class="sidebar-nav">
     <div class="nav-item active" data-view="results" onclick="showView('results')">
-      <span class="nav-icon">📊</span> Seuranta
+      <span class="nav-icon">📊</span> Tracking
     </div>
     <div class="nav-item" data-view="tips" onclick="showView('tips')">
-      <span class="nav-icon">💡</span> Vihjeet
+      <span class="nav-icon">💡</span> Tips
     </div>
     <div class="nav-item" id="adminNav" style="display:none" data-view="admin" onclick="showView('admin')">
       <span class="nav-icon">⚙️</span> Admin
@@ -252,8 +252,8 @@
   </nav>
   <div class="sidebar-footer">
     <div class="user-info" id="userLabel" style="display:none"></div>
-    <button class="auth-btn"        id="loginBtn"  onclick="showView('login')"  style="display:none">Kirjaudu</button>
-    <button class="auth-btn logout" id="logoutBtn" onclick="auth.signOut()"     style="display:none">Kirjaudu ulos</button>
+    <button class="auth-btn"        id="loginBtn"  onclick="showView('login')"  style="display:none">Log in</button>
+    <button class="auth-btn logout" id="logoutBtn" onclick="auth.signOut()"     style="display:none">Log out</button>
   </div>
 </aside>
 
@@ -263,90 +263,90 @@
   <!-- Results -->
   <div class="view active" id="view-results">
     <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:18px 20px;margin-bottom:22px;font-size:.88rem;line-height:1.7;color:var(--text)">
-      Minulla on noin viiden vuoden kokemus urheiluvedonlyönnistä ja pitkän aikavälin voitollinen seuranta kaikista vedoistani. Vihjeeni perustuvat dataan: hyödynnän muun muassa omia vedonlyöntimallejani sekä soft-bookkien kerroinvirheitä. Kaikki alla olevat tulokset ovat todellisia ja julkisesti seurattavissa.
+      I have approximately five years of experience in sports betting with a long-term profitable track record across all my bets. My tips are data-driven: I use my own betting models and exploit soft bookmaker pricing errors. All results shown on this page are real and publicly verifiable.
     </div>
     <div class="filters">
       <div class="filter-group">
-        <label>Laji</label>
+        <label>Sport</label>
         <div class="sport-chips" id="sportChips"></div>
       </div>
       <div class="filter-group">
-        <label>Ajanjakso</label>
-        <select id="monthSelect"><option value="all">Kaikki</option></select>
+        <label>Period</label>
+        <select id="monthSelect"><option value="all">All</option></select>
       </div>
     </div>
     <div class="stats-grid">
-      <div class="card"><div class="label">Vedot</div><div class="value neu" id="statCount">—</div></div>
+      <div class="card"><div class="label">Bets</div><div class="value neu" id="statCount">—</div></div>
       <div class="card"><div class="label">ROI</div><div class="value" id="statROI">—</div></div>
       <div class="card"><div class="label">P/L (u)</div><div class="value" id="statPL">—</div></div>
-      <div class="card"><div class="label">Avg kerroin</div><div class="value neu" id="statOdds">—</div><div class="sub" id="statOddsMed"></div></div>
+      <div class="card"><div class="label">Avg odds</div><div class="value neu" id="statOdds">—</div><div class="sub" id="statOddsMed"></div></div>
       <div class="card"><div class="label">Record</div><div class="value neu" id="statRecord" style="font-size:1.1rem;white-space:nowrap">—</div><div class="sub" id="statRecordSub"></div></div>
     </div>
     <div class="chart-wrap">
-      <h2>Kuukausittainen P/L (u)</h2>
+      <h2>Monthly P/L (u)</h2>
       <canvas id="plChart"></canvas>
     </div>
     <div style="font-size:.78rem;color:var(--muted);line-height:1.7;padding:4px 2px;border-top:1px solid var(--border);padding-top:16px">
-      <strong style="color:var(--text)">Vastuuvapauslauseke</strong> — Vedonlyöntiin liittyy aina riski. Yksittäinen vihje voi voittaa tai hävitä, eikä menneisyyden tulos takaa tulevaa. Vihjeet ovat oma näkemykseni, eivät takuita — jokainen vastaa omista panostuksistaan itse. Panosta vain sen verran kuin sinulla on varaa hävitä, äläkä yritä kuroa tappioita kiinni. Vain täysi-ikäisille (18+).
+      <strong style="color:var(--text)">Disclaimer</strong> — Betting always involves risk. Any individual tip can win or lose, and past results do not guarantee future performance. Tips represent my own opinion, not guarantees — each person is responsible for their own stakes. Only bet what you can afford to lose, and never chase losses. 18+ only.
     </div>
   </div>
 
   <!-- Tips -->
   <div class="view" id="view-tips">
-    <div class="notice" id="successNotice">Maksu onnistui! Vihje on nyt käytössäsi.</div>
-    <div class="section-title">Myytävät vihjeet</div>
-    <div class="tips-list" id="tipsGrid"><div class="empty">Ladataan...</div></div>
+    <div class="notice" id="successNotice">Payment successful! The tip is now available to you.</div>
+    <div class="section-title">Tips for sale</div>
+    <div class="tips-list" id="tipsGrid"><div class="empty">Loading...</div></div>
   </div>
 
   <!-- Admin -->
   <div class="view" id="view-admin">
     <!-- Add tip -->
-    <div class="section-title">Lisää uusi vihje</div>
+    <div class="section-title">Add new tip</div>
     <div class="admin-form" style="margin-bottom:48px">
-      <div class="field"><label class="field-label">Otsikko *</label><input type="text" id="f_title" placeholder="esim. Djokovic vs Alcaraz — Alcaraz voittaa"></div>
+      <div class="field"><label class="field-label">Title *</label><input type="text" id="f_title" placeholder="e.g. Djokovic vs Alcaraz — Alcaraz to win"></div>
       <div class="row2">
         <div class="field">
-          <label class="field-label">Laji</label>
-          <select id="f_sport"><option>Tennis</option><option>Football</option><option>Basketball</option><option>Hockey</option><option>Darts</option><option>Muu</option></select>
+          <label class="field-label">Sport</label>
+          <select id="f_sport"><option>Tennis</option><option>Football</option><option>Basketball</option><option>Hockey</option><option>Darts</option><option>Other</option></select>
         </div>
-        <div class="field"><label class="field-label">Päivämäärä</label><input type="text" id="f_date" placeholder="13.8.2026"></div>
+        <div class="field"><label class="field-label">Date</label><input type="text" id="f_date" placeholder="14.8.2026"></div>
       </div>
-      <div class="field"><label class="field-label">Ottelu</label><input type="text" id="f_match" placeholder="esim. Djokovic vs Alcaraz"></div>
+      <div class="field"><label class="field-label">Match</label><input type="text" id="f_match" placeholder="e.g. Djokovic vs Alcaraz"></div>
       <div class="row2">
-        <div class="field"><label class="field-label">Kerroin</label><input type="number" id="f_odds" step="0.01" placeholder="1.85"></div>
-        <div class="field"><label class="field-label">Suositus (u)</label><input type="number" id="f_stake" step="0.5" placeholder="2"></div>
+        <div class="field"><label class="field-label">Odds</label><input type="number" id="f_odds" step="0.01" placeholder="1.85"></div>
+        <div class="field"><label class="field-label">Stake (u)</label><input type="number" id="f_stake" step="0.5" placeholder="2"></div>
       </div>
-      <div class="field"><label class="field-label">Hinta (€) *</label><input type="number" id="f_price" step="0.5" min="1" placeholder="5"></div>
-      <div class="field"><label class="field-label">Vihje (näkyy vain ostajille) *</label><textarea id="f_content" placeholder="Kirjoita vihje tähän..."></textarea></div>
-      <div class="msg-ok" id="adminOk">Vihje lisätty!</div>
+      <div class="field"><label class="field-label">Price (€) *</label><input type="number" id="f_price" step="0.5" min="1" placeholder="5"></div>
+      <div class="field"><label class="field-label">Tip content (visible to buyers only) *</label><textarea id="f_content" placeholder="Write the tip here..."></textarea></div>
+      <div class="msg-ok" id="adminOk">Tip added!</div>
       <div class="msg-err" id="adminErr"></div>
-      <button class="submit-btn" onclick="submitTip()">Lisää vihje</button>
+      <button class="submit-btn" onclick="submitTip()">Add tip</button>
     </div>
 
     <!-- Discount codes -->
-    <div class="section-title">Alennuskoodit</div>
+    <div class="section-title">Discount codes</div>
     <div class="admin-form" style="margin-bottom:28px">
       <div class="row2">
-        <div class="field"><label class="field-label">Koodi *</label><input type="text" id="dc_code" placeholder="esim. KESÄ25" style="text-transform:uppercase"></div>
+        <div class="field"><label class="field-label">Code *</label><input type="text" id="dc_code" placeholder="e.g. SUMMER25" style="text-transform:uppercase"></div>
         <div class="field">
-          <label class="field-label">Tyyppi *</label>
+          <label class="field-label">Type *</label>
           <select id="dc_type">
-            <option value="percent">Prosentti (%)</option>
-            <option value="fixed">Kiinteä (€)</option>
+            <option value="percent">Percentage (%)</option>
+            <option value="fixed">Fixed (€)</option>
           </select>
         </div>
       </div>
       <div class="row2">
-        <div class="field"><label class="field-label">Arvo *</label><input type="number" id="dc_value" step="1" min="1" placeholder="esim. 20"></div>
-        <div class="field"><label class="field-label">Max käyttöä (tyhjä = rajaton)</label><input type="number" id="dc_maxuses" step="1" min="1" placeholder="—"></div>
+        <div class="field"><label class="field-label">Value *</label><input type="number" id="dc_value" step="1" min="1" placeholder="e.g. 20"></div>
+        <div class="field"><label class="field-label">Max uses (blank = unlimited)</label><input type="number" id="dc_maxuses" step="1" min="1" placeholder="—"></div>
       </div>
       <div class="msg-ok"  id="dcOk"></div>
       <div class="msg-err" id="dcErr"></div>
-      <button class="submit-btn" onclick="submitDiscount()">Luo alennuskoodi</button>
+      <button class="submit-btn" onclick="submitDiscount()">Create discount code</button>
     </div>
 
     <!-- Code list -->
-    <div id="dcList"><div class="empty" style="padding:20px">Ladataan koodeja...</div></div>
+    <div id="dcList"><div class="empty" style="padding:20px">Loading codes...</div></div>
   </div>
 
   <!-- Login redirect placeholder -->
@@ -423,12 +423,12 @@ let activeSport = 'all', activeMonth = 'all';
 fetch('data.json')
   .then(r => r.json())
   .then(data => { ALL_BETS = data.bets; ALL_SPORTS = data.sports; ALL_MONTHS = data.months; initResults(); })
-  .catch(() => { document.getElementById('view-results').innerHTML = '<div class="empty">data.json ei löydy.</div>'; });
+  .catch(() => { document.getElementById('view-results').innerHTML = '<div class="empty">data.json not found.</div>'; });
 
 function initResults() {
   const chips = document.getElementById('sportChips');
   const allChip = document.createElement('span');
-  allChip.className = 'chip active'; allChip.textContent = 'Kaikki'; allChip.dataset.sport = 'all';
+  allChip.className = 'chip active'; allChip.textContent = 'All'; allChip.dataset.sport = 'all';
   allChip.onclick = () => selectSport('all'); chips.appendChild(allChip);
   ALL_SPORTS.forEach(s => {
     const el = document.createElement('span');
@@ -439,7 +439,7 @@ function initResults() {
   ALL_MONTHS.slice().reverse().forEach(ym => {
     const opt = document.createElement('option'); opt.value = ym;
     const [y, m] = ym.split('-');
-    const mn = ['','Tammikuu','Helmikuu','Maaliskuu','Huhtikuu','Toukokuu','Kesäkuu','Heinäkuu','Elokuu','Syyskuu','Lokakuu','Marraskuu','Joulukuu'];
+    const mn = ['','January','February','March','April','May','June','July','August','September','October','November','December'];
     opt.textContent = `${y} ${mn[parseInt(m)]}`; sel.appendChild(opt);
   });
   sel.onchange = () => { activeMonth = sel.value; updateResults(); };
@@ -479,9 +479,9 @@ function updateResults() {
   roiEl.className = 'value ' + (roi >= 0 ? 'pos' : 'neg');
   document.getElementById('statCount').textContent    = bets.length.toLocaleString('fi');
   document.getElementById('statOdds').textContent     = fmt(avgOdds);
-  document.getElementById('statOddsMed').textContent  = `mediaani ${fmt(medOdds)}`;
+  document.getElementById('statOddsMed').textContent  = `median ${fmt(medOdds)}`;
   document.getElementById('statRecord').textContent   = `${wins}–${pushes}–${losses}`;
-  document.getElementById('statRecordSub').textContent = `${fmt(winPct,1)}% voittoaste`;
+  document.getElementById('statRecordSub').textContent = `${fmt(winPct,1)}% win rate`;
 
   const monthMap = {};
   (activeMonth === 'all' ? ALL_MONTHS : [activeMonth]).forEach(ym => monthMap[ym] = 0);
@@ -490,7 +490,7 @@ function updateResults() {
 }
 
 function updateChart(entries) {
-  const labels  = entries.map(([ym]) => { const [y,m]=ym.split('-'); return ['','Tam','Hel','Maa','Huh','Tou','Kes','Hei','Elo','Syy','Lok','Mar','Jou'][parseInt(m)]+' '+y.slice(2); });
+  const labels  = entries.map(([ym]) => { const [y,m]=ym.split('-'); return ['','Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][parseInt(m)]+' '+y.slice(2); });
   const values  = entries.map(([,v]) => parseFloat(v.toFixed(4)));
   const colors  = values.map(v => v >= 0 ? '#34d39966' : '#f8717166');
   const borders = values.map(v => v >= 0 ? '#34d399' : '#f87171');
@@ -514,10 +514,10 @@ async function loadTips() {
   const grid = document.getElementById('tipsGrid');
   try {
     const snap = await db.collection('tips').where('active','==',true).orderBy('createdAt','desc').get();
-    if (snap.empty) { grid.innerHTML = '<div class="empty">Ei aktiivisia vihjeitä tällä hetkellä.</div>'; return; }
+    if (snap.empty) { grid.innerHTML = '<div class="empty">No active tips at the moment.</div>'; return; }
     grid.innerHTML = '';
     snap.forEach(doc => grid.appendChild(buildTipCard(doc.id, doc.data(), userPurchases.has(doc.id))));
-  } catch(e) { grid.innerHTML = '<div class="empty">Virhe ladattaessa vihjeitä.</div>'; }
+  } catch(e) { grid.innerHTML = '<div class="empty">Error loading tips.</div>'; }
 }
 
 function buildTipCard(tipId, tip, owned) {
@@ -529,19 +529,19 @@ function buildTipCard(tipId, tip, owned) {
 
   let actionHtml;
   if (owned) {
-    actionHtml = `<div class="bought-badge">✓ Ostettu</div>`;
+    actionHtml = `<div class="bought-badge">✓ Purchased</div>`;
   } else if (currentUser) {
     actionHtml = `
       <div style="display:flex;flex-direction:column;gap:7px;align-items:flex-end">
-        <button class="buy-btn" onclick="buyTip('${tipId}', '${tip.price}', this)">Osta ${tip.price}€</button>
-        <span style="font-size:.75rem;color:var(--muted);cursor:pointer;text-decoration:underline" onclick="toggleDiscountInput('${tipId}')">Alennuskoodi?</span>
+        <button class="buy-btn" onclick="buyTip('${tipId}', '${tip.price}', this)">Buy ${tip.price}€</button>
+        <span style="font-size:.75rem;color:var(--muted);cursor:pointer;text-decoration:underline" onclick="toggleDiscountInput('${tipId}')">Discount code?</span>
         <div id="dc-wrap-${tipId}" style="display:none;flex-direction:column;gap:5px;align-items:flex-end">
-          <input id="dc-input-${tipId}" type="text" placeholder="Koodi" style="background:var(--bg3);border:1px solid var(--border);border-radius:6px;color:var(--text);padding:6px 10px;font-size:.82rem;outline:none;width:120px;text-transform:uppercase">
+          <input id="dc-input-${tipId}" type="text" placeholder="Code" style="background:var(--bg3);border:1px solid var(--border);border-radius:6px;color:var(--text);padding:6px 10px;font-size:.82rem;outline:none;width:120px;text-transform:uppercase">
           <span id="dc-msg-${tipId}" style="font-size:.75rem;color:var(--muted)"></span>
         </div>
       </div>`;
   } else {
-    actionHtml = `<button class="buy-btn" onclick="showView('login')">Kirjaudu</button>`;
+    actionHtml = `<button class="buy-btn" onclick="showView('login')">Log in</button>`;
   }
 
   card.innerHTML = `
@@ -555,7 +555,7 @@ function buildTipCard(tipId, tip, owned) {
       ${contentHtml}
     </div>
     <div class="tip-side">
-      <div><div class="price" id="price-${tipId}">${tip.price}€</div><div class="price-label">per vihje</div></div>
+      <div><div class="price" id="price-${tipId}">${tip.price}€</div><div class="price-label">per tip</div></div>
       ${actionHtml}
     </div>`;
   return card;
@@ -570,16 +570,16 @@ async function buyTip(tipId, basePrice, btn) {
   if (!currentUser) { showView('login'); return; }
   const codeInput = document.getElementById(`dc-input-${tipId}`);
   const discountCode = codeInput ? codeInput.value.trim().toUpperCase() : '';
-  btn.disabled = true; btn.textContent = 'Odota...';
+  btn.disabled = true; btn.textContent = 'Please wait...';
   try {
     const fn = functions.httpsCallable('createCheckoutSession');
     const result = await fn({ tipId, discountCode: discountCode || null });
     window.location.href = result.data.url;
   } catch(e) {
-    btn.disabled = false; btn.textContent = `Osta ${basePrice}€`;
+    btn.disabled = false; btn.textContent = `Buy ${basePrice}€`;
     const msgEl = document.getElementById(`dc-msg-${tipId}`);
-    if (msgEl) { msgEl.textContent = e.message || 'Virhe.'; msgEl.style.color = 'var(--red)'; }
-    else alert(e.message || 'Jokin meni pieleen.');
+    if (msgEl) { msgEl.textContent = e.message || 'An error occurred.'; msgEl.style.color = 'var(--red)'; }
+    else alert(e.message || 'Something went wrong.');
   }
 }
 
@@ -592,17 +592,17 @@ async function submitDiscount() {
   const okEl  = document.getElementById('dcOk');
   const errEl = document.getElementById('dcErr');
   okEl.style.display = errEl.style.display = 'none';
-  if (!code || !value) { errEl.textContent = 'Täytä koodi ja arvo.'; errEl.style.display='block'; return; }
-  const btn = event.target; btn.disabled = true; btn.textContent = 'Luodaan...';
+  if (!code || !value) { errEl.textContent = 'Fill in code and value.'; errEl.style.display='block'; return; }
+  const btn = event.target; btn.disabled = true; btn.textContent = 'Creating...';
   try {
     await functions.httpsCallable('addDiscountCode')({ code, type, value, maxUses });
-    okEl.textContent = `Koodi ${code} luotu!`; okEl.style.display = 'block';
+    okEl.textContent = `Code ${code} created!`; okEl.style.display = 'block';
     document.getElementById('dc_code').value = '';
     document.getElementById('dc_value').value = '';
     document.getElementById('dc_maxuses').value = '';
     loadDiscountCodes();
-  } catch(e) { errEl.textContent = e.message || 'Virhe.'; errEl.style.display = 'block'; }
-  finally { btn.disabled = false; btn.textContent = 'Luo alennuskoodi'; }
+  } catch(e) { errEl.textContent = e.message || 'Error.'; errEl.style.display = 'block'; }
+  finally { btn.disabled = false; btn.textContent = 'Create discount code'; }
 }
 
 async function loadDiscountCodes() {
@@ -610,14 +610,14 @@ async function loadDiscountCodes() {
   try {
     const result = await functions.httpsCallable('listDiscountCodes')({});
     const codes = result.data;
-    if (!codes.length) { list.innerHTML = '<div style="color:var(--muted);font-size:.85rem;padding:8px 0">Ei koodeja vielä.</div>'; return; }
+    if (!codes.length) { list.innerHTML = '<div style="color:var(--muted);font-size:.85rem;padding:8px 0">No codes yet.</div>'; return; }
     list.innerHTML = `
       <table style="width:100%;max-width:600px;border-collapse:collapse;font-size:.85rem">
         <thead><tr style="color:var(--muted);text-align:left">
-          <th style="padding:6px 10px">Koodi</th>
-          <th style="padding:6px 10px">Alennus</th>
-          <th style="padding:6px 10px">Käyttöjä</th>
-          <th style="padding:6px 10px">Tila</th>
+          <th style="padding:6px 10px">Code</th>
+          <th style="padding:6px 10px">Discount</th>
+          <th style="padding:6px 10px">Uses</th>
+          <th style="padding:6px 10px">Status</th>
         </tr></thead>
         <tbody>${codes.map(c => `
           <tr style="border-top:1px solid var(--border)">
@@ -626,13 +626,13 @@ async function loadDiscountCodes() {
             <td style="padding:8px 10px">${c.usedCount}${c.maxUses ? ' / ' + c.maxUses : ''}</td>
             <td style="padding:8px 10px">
               <button onclick="toggleCode('${c.code}', ${!c.active})" style="padding:4px 10px;border-radius:6px;font-size:.75rem;cursor:pointer;border:1px solid ${c.active ? 'var(--green)' : 'var(--border)'};background:transparent;color:${c.active ? 'var(--green)' : 'var(--muted)'}">
-                ${c.active ? 'Aktiivinen' : 'Pois käytöstä'}
+                ${c.active ? 'Active' : 'Inactive'}
               </button>
             </td>
           </tr>`).join('')}
         </tbody>
       </table>`;
-  } catch(e) { list.innerHTML = '<div style="color:var(--red);font-size:.85rem">Virhe ladattaessa koodeja.</div>'; }
+  } catch(e) { list.innerHTML = '<div style="color:var(--red);font-size:.85rem">Error loading codes.</div>'; }
 }
 
 async function toggleCode(code, active) {
@@ -654,16 +654,16 @@ async function submitTip() {
   const okEl  = document.getElementById('adminOk');
   const errEl = document.getElementById('adminErr');
   okEl.style.display = errEl.style.display = 'none';
-  if (!title || !price || !content) { errEl.textContent = 'Täytä pakolliset kentät.'; errEl.style.display='block'; return; }
+  if (!title || !price || !content) { errEl.textContent = 'Fill in required fields.'; errEl.style.display='block'; return; }
   const btn = document.querySelector('.submit-btn');
-  btn.disabled = true; btn.textContent = 'Lisätään...';
+  btn.disabled = true; btn.textContent = 'Adding...';
   try {
     await functions.httpsCallable('addTip')({ title, sport, date, match, odds, stake, price, content });
     okEl.style.display = 'block';
     document.querySelectorAll('.admin-form input, .admin-form textarea').forEach(el => el.value = '');
     tipsLoaded = false;
-  } catch(e) { errEl.textContent = e.message || 'Virhe.'; errEl.style.display = 'block'; }
-  finally { btn.disabled = false; btn.textContent = 'Lisää vihje'; }
+  } catch(e) { errEl.textContent = e.message || 'Error.'; errEl.style.display = 'block'; }
+  finally { btn.disabled = false; btn.textContent = 'Add tip'; }
 }
 </script>
 </body>

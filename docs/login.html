@@ -153,7 +153,7 @@
   const db   = firebase.firestore();
 
   // EmailJS init
-  emailjs.init("2UX_f8B_2vF93BA-d");
+  emailjs.init({ publicKey: "2UX_f8B_2vF93BA-d" });
 
   // Redirect if already logged in
   auth.onAuthStateChanged(user => {

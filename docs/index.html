@@ -555,10 +555,12 @@ function toggleSidebar() {
 let currentUser = null;
 let userPurchases = new Set();
 let tipsLoaded = false;
+let wasLoggedIn = false;
 
 auth.onAuthStateChanged(async user => {
   currentUser = user;
   if (user) {
+    wasLoggedIn = true;
     document.getElementById('userLabel').textContent = user.displayName || user.email;
     document.getElementById('userLabel').style.display = 'block';
     document.getElementById('logoutBtn').style.display = 'block';
@@ -571,6 +573,8 @@ auth.onAuthStateChanged(async user => {
     document.getElementById('logoutBtn').style.display = 'none';
     document.getElementById('loginBtn').style.display  = 'block';
     document.getElementById('adminNav').style.display  = 'none';
+    if (wasLoggedIn) showView('login');
+    wasLoggedIn = false;
   }
 
   // Handle ?success=1 after Stripe redirect

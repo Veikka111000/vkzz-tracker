@@ -287,6 +287,9 @@
     <span>VkZz</span>
   </div>
   <nav class="sidebar-nav">
+    <div class="nav-item" data-view="about" onclick="showView('about')">
+      <span class="nav-icon">👤</span> About
+    </div>
     <div class="nav-item active" data-view="results" onclick="showView('results')">
       <span class="nav-icon">📊</span> Tracking
     </div>
@@ -309,9 +312,6 @@
 
   <!-- Results -->
   <div class="view active" id="view-results">
-    <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:18px 20px;margin-bottom:22px;font-size:.88rem;line-height:1.7;color:var(--text)">
-      I have approximately five years of experience in sports betting with a long-term profitable track record across all my bets. My tips are data-driven: I use my own betting models and exploit soft bookmaker pricing errors. All results shown on this page are real and publicly verifiable.
-    </div>
     <div class="filters">
       <div class="filter-group">
         <label>Sport</label>
@@ -398,6 +398,16 @@
     <!-- Manage tips -->
     <div class="section-title" style="margin-top:48px">Manage tips</div>
     <div id="adminTipsList"><div class="empty" style="padding:20px">Loading tips...</div></div>
+  </div>
+
+  <!-- About -->
+  <div class="view" id="view-about">
+    <div style="max-width:640px">
+      <div class="section-title">About</div>
+      <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:24px 26px;font-size:.93rem;line-height:1.8;color:var(--text)">
+        I have approximately five years of experience in sports betting with a long-term profitable track record across all my bets. My tips are data-driven: I use my own betting models and exploit soft bookmaker pricing errors. All results shown on this page are real and publicly verifiable.
+      </div>
+    </div>
   </div>
 
   <!-- Login / Register -->

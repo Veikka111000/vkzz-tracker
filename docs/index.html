@@ -79,6 +79,11 @@
     display: flex; align-items: center; gap: 10px;
     padding: 0 14px 20px; border-bottom: 1px solid var(--border);
   }
+  .sidebar-logo {
+    width: 36px; height: 36px; border-radius: 50%;
+    object-fit: cover; flex-shrink: 0;
+    border: 1px solid var(--border);
+  }
   .sidebar-brand span {
     font-size: 1.4rem; font-weight: 700; letter-spacing: -0.02em;
     white-space: nowrap; overflow: hidden;
@@ -307,6 +312,7 @@
 <aside class="sidebar" id="sidebar">
   <div class="sidebar-brand">
     <button class="sidebar-toggle" onclick="toggleSidebar()">☰</button>
+    <img src="logo.png" alt="VkZz" class="sidebar-logo">
     <span>VkZz</span>
   </div>
   <nav class="sidebar-nav">
@@ -430,7 +436,13 @@
   <!-- About -->
   <div class="view" id="view-about">
     <div style="max-width:640px">
-      <div class="section-title">About</div>
+      <div style="display:flex;align-items:center;gap:20px;margin-bottom:28px">
+        <img src="logo.png" alt="VkZz" style="width:90px;height:90px;border-radius:50%;object-fit:cover;border:2px solid var(--border)">
+        <div>
+          <div style="font-size:1.5rem;font-weight:700;letter-spacing:-.02em">VkZz</div>
+          <div style="font-size:.85rem;color:var(--muted);margin-top:4px">Sports betting analyst</div>
+        </div>
+      </div>
       <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:24px 26px;font-size:.93rem;line-height:1.8;color:var(--text)">
         I have approximately five years of experience in sports betting with a long-term profitable track record across all my bets. My tips are data-driven: I use my own betting models and exploit soft bookmaker pricing errors. All results shown on this page are real and publicly verifiable.
       </div>

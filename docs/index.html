@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="fi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Betting Tracker</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+  :root {
+    --bg:      #0f1117;
+    --bg2:     #1a1d27;
+    --bg3:     #22263a;
+    --border:  #2e3350;
+    --accent:  #4f8ef7;
+    --green:   #34d399;
+    --red:     #f87171;
+    --text:    #e2e8f0;
+    --muted:   #64748b;
+    --radius:  10px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: 'Inter', system-ui, sans-serif; font-size: 15px; }
+
+  header {
+    padding: 28px 32px 20px;
+    border-bottom: 1px solid var(--border);
+  }
+  header h1 { font-size: 1.5rem; font-weight: 700; letter-spacing: -0.02em; }
+  header p  { color: var(--muted); font-size: 0.85rem; margin-top: 4px; }
+
+  .container { max-width: 1100px; margin: 0 auto; padding: 28px 24px; }
+
+  /* Filters */
+  .filters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 20px;
+    align-items: flex-start;
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 18px 20px;
+    margin-bottom: 28px;
+  }
+  .filter-group { display: flex; flex-direction: column; gap: 8px; }
+  .filter-group label { font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); }
+  .sport-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+  .chip {
+    cursor: pointer;
+    padding: 5px 12px;
+    border-radius: 20px;
+    font-size: 0.82rem;
+    border: 1px solid var(--border);
+    background: var(--bg3);
+    color: var(--muted);
+    transition: all .15s;
+    user-select: none;
+  }
+  .chip.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .chip:hover:not(.active) { border-color: var(--accent); color: var(--text); }
+
+  select {
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text);
+    padding: 7px 12px;
+    font-size: 0.88rem;
+    cursor: pointer;
+    outline: none;
+    min-width: 160px;
+  }
+  select:focus { border-color: var(--accent); }
+
+  .reset-btn {
+    align-self: flex-end;
+    padding: 7px 16px;
+    background: transparent;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--muted);
+    font-size: 0.82rem;
+    cursor: pointer;
+    transition: all .15s;
+  }
+  .reset-btn:hover { border-color: var(--accent); color: var(--text); }
+
+  /* Stats cards */
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+    gap: 14px;
+    margin-bottom: 32px;
+  }
+  .card {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px 18px;
+  }
+  .card .label { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.07em; color: var(--muted); margin-bottom: 6px; }
+  .card .value { font-size: 1.55rem; font-weight: 700; letter-spacing: -0.02em; }
+  .card .sub   { font-size: 0.78rem; color: var(--muted); margin-top: 3px; }
+  .pos { color: var(--green); }
+  .neg { color: var(--red); }
+  .neu { color: var(--text); }
+
+  /* Chart */
+  .chart-wrap {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px;
+    margin-bottom: 28px;
+  }
+  .chart-wrap h2 { font-size: 0.9rem; font-weight: 600; color: var(--muted); margin-bottom: 16px; text-transform: uppercase; letter-spacing: 0.06em; }
+  .chart-wrap canvas { max-height: 240px; }
+
+  /* Empty state */
+  .empty { text-align: center; color: var(--muted); padding: 48px; }
+
+  footer { text-align: center; color: var(--muted); font-size: 0.78rem; padding: 24px; border-top: 1px solid var(--border); margin-top: 12px; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Betting Tracker</h1>
+  <p>Aggregated performance statistics · units (1u = 100€)</p>
+</header>
+
+<div class="container">
+
+  <!-- Filters -->
+  <div class="filters">
+    <div class="filter-group">
+      <label>Laji</label>
+      <div class="sport-chips" id="sportChips"></div>
+    </div>
+    <div class="filter-group">
+      <label>Ajanjakso</label>
+      <select id="monthSelect">
+        <option value="all">Kaikki</option>
+      </select>
+    </div>
+    <button class="reset-btn" onclick="resetFilters()">Nollaa</button>
+  </div>
+
+  <!-- Stats -->
+  <div class="stats-grid">
+    <div class="card">
+      <div class="label">Vedot</div>
+      <div class="value neu" id="statCount">—</div>
+    </div>
+    <div class="card">
+      <div class="label">ROI</div>
+      <div class="value" id="statROI">—</div>
+    </div>
+    <div class="card">
+      <div class="label">P/L (u)</div>
+      <div class="value" id="statPL">—</div>
+    </div>
+    <div class="card">
+      <div class="label">Avg kerroin</div>
+      <div class="value neu" id="statOdds">—</div>
+      <div class="sub" id="statOddsMed"></div>
+    </div>
+    <div class="card">
+      <div class="label">Record</div>
+      <div class="value neu" id="statRecord">—</div>
+      <div class="sub" id="statRecordSub"></div>
+    </div>
+  </div>
+
+  <!-- Chart -->
+  <div class="chart-wrap">
+    <h2>Kuukausittainen P/L (u)</h2>
+    <canvas id="plChart"></canvas>
+  </div>
+
+</div>
+
+<footer>Vain aggregaattitilastoja · Ei yksittäisiä vetoja · Ei henkilötietoja</footer>
+
+<script>
+let ALL_BETS = [];
+let ALL_SPORTS = [];
+let ALL_MONTHS = [];
+let chart = null;
+
+// Active filters
+let activeSports = new Set();
+let activeMonth  = 'all';
+
+fetch('data.json')
+  .then(r => r.json())
+  .then(data => {
+    ALL_BETS   = data.bets;
+    ALL_SPORTS = data.sports;
+    ALL_MONTHS = data.months;
+    init();
+  })
+  .catch(() => {
+    document.querySelector('.container').innerHTML =
+      '<div class="empty">data.json ei löydy. Aja build_data.py ensin.</div>';
+  });
+
+function init() {
+  // Sport chips
+  const chips = document.getElementById('sportChips');
+  ALL_SPORTS.forEach(s => {
+    const el = document.createElement('span');
+    el.className = 'chip active';
+    el.textContent = s;
+    el.dataset.sport = s;
+    el.onclick = () => toggleSport(s, el);
+    chips.appendChild(el);
+    activeSports.add(s);
+  });
+
+  // Month select
+  const sel = document.getElementById('monthSelect');
+  ALL_MONTHS.slice().reverse().forEach(ym => {
+    const opt = document.createElement('option');
+    opt.value = ym;
+    const [y, m] = ym.split('-');
+    const monthNames = ['','Tammikuu','Helmikuu','Maaliskuu','Huhtikuu','Toukokuu','Kesäkuu',
+                        'Heinäkuu','Elokuu','Syyskuu','Lokakuu','Marraskuu','Joulukuu'];
+    opt.textContent = `${y} ${monthNames[parseInt(m)]}`;
+    sel.appendChild(opt);
+  });
+  sel.onchange = () => { activeMonth = sel.value; update(); };
+
+  update();
+}
+
+function toggleSport(sport, el) {
+  if (activeSports.has(sport)) {
+    activeSports.delete(sport);
+    el.classList.remove('active');
+  } else {
+    activeSports.add(sport);
+    el.classList.add('active');
+  }
+  update();
+}
+
+function resetFilters() {
+  activeSports = new Set(ALL_SPORTS);
+  document.querySelectorAll('.chip').forEach(c => c.classList.add('active'));
+  activeMonth = 'all';
+  document.getElementById('monthSelect').value = 'all';
+  update();
+}
+
+function filtered() {
+  return ALL_BETS.filter(b =>
+    activeSports.has(b.sport) &&
+    (activeMonth === 'all' || b.ym === activeMonth)
+  );
+}
+
+function fmt(n, decimals=2) {
+  return n.toFixed(decimals).replace('.', ',');
+}
+
+function update() {
+  const bets = filtered();
+
+  if (bets.length === 0) {
+    document.getElementById('statCount').textContent  = '0';
+    document.getElementById('statROI').textContent    = '—';
+    document.getElementById('statROI').className      = 'value neu';
+    document.getElementById('statPL').textContent     = '—';
+    document.getElementById('statPL').className       = 'value neu';
+    document.getElementById('statOdds').textContent   = '—';
+    document.getElementById('statRecord').textContent = '—';
+    document.getElementById('statRecordSub').textContent = '';
+    updateChart([]);
+    return;
+  }
+
+  const totalPL    = bets.reduce((s, b) => s + b.pl, 0);
+  const totalStake = bets.reduce((s, b) => s + b.stake, 0);
+  const roi        = totalStake > 0 ? (totalPL / totalStake) * 100 : 0;
+  const avgOdds    = bets.reduce((s, b) => s + b.odds, 0) / bets.length;
+  const wins       = bets.filter(b => b.result === 'W').length;
+  const losses     = bets.filter(b => b.result === 'L').length;
+  const pushes     = bets.filter(b => b.result === 'P').length;
+  const winPct     = wins / (wins + losses) * 100;
+
+  const plEl = document.getElementById('statPL');
+  plEl.textContent = (totalPL >= 0 ? '+' : '') + fmt(totalPL) + 'u';
+  plEl.className = 'value ' + (totalPL >= 0 ? 'pos' : 'neg');
+
+  const roiEl = document.getElementById('statROI');
+  roiEl.textContent = (roi >= 0 ? '+' : '') + fmt(roi) + '%';
+  roiEl.className = 'value ' + (roi >= 0 ? 'pos' : 'neg');
+
+  document.getElementById('statCount').textContent  = bets.length.toLocaleString('fi');
+  const sortedOdds = bets.map(b => b.odds).sort((a,b) => a-b);
+  const medOdds = sortedOdds[Math.floor(sortedOdds.length / 2)];
+  document.getElementById('statOdds').textContent   = fmt(avgOdds);
+  document.getElementById('statOddsMed').textContent = `mediaani ${fmt(medOdds)}`;
+  document.getElementById('statRecord').textContent = `${wins}–${pushes}–${losses}`;
+  document.getElementById('statRecordSub').textContent = `${fmt(winPct, 1)}% voittoaste`;
+
+  // Monthly chart data
+  const monthMap = {};
+  (activeMonth === 'all' ? ALL_MONTHS : [activeMonth]).forEach(ym => monthMap[ym] = 0);
+  bets.forEach(b => { if (monthMap[b.ym] !== undefined) monthMap[b.ym] += b.pl; });
+  updateChart(Object.entries(monthMap));
+}
+
+function updateChart(entries) {
+  const labels = entries.map(([ym]) => {
+    const [y, m] = ym.split('-');
+    const mn = ['','Tam','Hel','Maa','Huh','Tou','Kes','Hei','Elo','Syy','Lok','Mar','Jou'][parseInt(m)];
+    return `${mn} ${y.slice(2)}`;
+  });
+  const values = entries.map(([, v]) => parseFloat(v.toFixed(4)));
+  const colors = values.map(v => v >= 0 ? '#34d39966' : '#f8717166');
+  const borders= values.map(v => v >= 0 ? '#34d399' : '#f87171');
+
+  if (chart) {
+    chart.data.labels = labels;
+    chart.data.datasets[0].data   = values;
+    chart.data.datasets[0].backgroundColor = colors;
+    chart.data.datasets[0].borderColor     = borders;
+    chart.update();
+    return;
+  }
+
+  const ctx = document.getElementById('plChart').getContext('2d');
+  chart = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [{
+        data: values,
+        backgroundColor: colors,
+        borderColor: borders,
+        borderWidth: 1.5,
+        borderRadius: 4,
+      }]
+    },
+    options: {
+      responsive: true,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: ctx => {
+              const v = ctx.parsed.y;
+              return (v >= 0 ? '+' : '') + v.toFixed(2).replace('.', ',') + 'u';
+            }
+          }
+        }
+      },
+      scales: {
+        x: { grid: { color: '#2e3350' }, ticks: { color: '#64748b', font: { size: 11 } } },
+        y: {
+          grid: { color: '#2e3350' },
+          ticks: {
+            color: '#64748b', font: { size: 11 },
+            callback: v => (v >= 0 ? '+' : '') + v.toFixed(1) + 'u'
+          }
+        }
+      }
+    }
+  });
+}
+</script>
+</body>
+</html>

@@ -377,8 +377,10 @@
   <!-- Tips -->
   <div class="view" id="view-tips">
     <div class="notice" id="successNotice">Payment successful! The tip is now available to you.</div>
-    <div class="section-title">Tips for sale</div>
-    <div class="tips-list" id="tipsGrid"><div class="empty">Loading...</div></div>
+    <div class="section-title">Free tips</div>
+    <div class="tips-list" id="tipsGridFree"><div class="empty">Loading...</div></div>
+    <div class="section-title" style="margin-top:36px">Premium tips</div>
+    <div class="tips-list" id="tipsGridPaid"><div class="empty">Loading...</div></div>
   </div>
 
   <!-- Admin -->
@@ -707,13 +709,25 @@ function updateChart(entries) {
 
 // ── Tips view ──────────────────────────────────────────────────────────────────
 async function loadTips() {
-  const grid = document.getElementById('tipsGrid');
+  const freeGrid = document.getElementById('tipsGridFree');
+  const paidGrid = document.getElementById('tipsGridPaid');
   try {
     const snap = await db.collection('tips').where('active','==',true).orderBy('createdAt','desc').get();
-    if (snap.empty) { grid.innerHTML = '<div class="empty">No active tips at the moment.</div>'; return; }
-    grid.innerHTML = '';
-    snap.forEach(doc => grid.appendChild(buildTipCard(doc.id, doc.data(), userPurchases.has(doc.id))));
-  } catch(e) { grid.innerHTML = '<div class="empty">Error loading tips.</div>'; }
+    freeGrid.innerHTML = '';
+    paidGrid.innerHTML = '';
+    let freeCount = 0, paidCount = 0;
+    snap.forEach(doc => {
+      const tip = doc.data();
+      const card = buildTipCard(doc.id, tip, userPurchases.has(doc.id));
+      if (tip.price === 0) { freeGrid.appendChild(card); freeCount++; }
+      else { paidGrid.appendChild(card); paidCount++; }
+    });
+    if (freeCount === 0) freeGrid.innerHTML = '<div class="empty">No free tips at the moment.</div>';
+    if (paidCount === 0) paidGrid.innerHTML = '<div class="empty">No premium tips at the moment.</div>';
+  } catch(e) {
+    freeGrid.innerHTML = '<div class="empty">Error loading tips.</div>';
+    paidGrid.innerHTML = '';
+  }
 }
 
 function buildTipCard(tipId, tip, owned) {

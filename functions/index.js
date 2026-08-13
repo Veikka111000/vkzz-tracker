@@ -137,8 +137,8 @@ exports.addTip = onCall({ cors: true }, async (request) => {
     throw new HttpsError("permission-denied", "Ei oikeuksia.");
 
   const { title, sport, match, date, odds, stake, price, content } = request.data;
-  if (!title || !price || !content)
-    throw new HttpsError("invalid-argument", "Pakollisia kenttiä puuttuu.");
+  if (!title || price == null || isNaN(price) || !content)
+    throw new HttpsError("invalid-argument", "Fill in required fields.");
 
   const ref = await db.collection("tips").add({
     title, sport: sport || "", match: match || "", date: date || "",

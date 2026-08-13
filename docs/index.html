@@ -743,7 +743,8 @@ function buildTipCard(tipId, tip, owned) {
   const card = document.createElement('div');
   card.className = 'tip-card' + (owned ? ' purchased' : '');
   const dateStr  = tip.date  ? `<span>📅 ${tip.date}</span>` : '';
-  const oddsStr  = tip.odds  ? `<span>📈 @${tip.odds}</span>` : '';
+  const showOdds = isFreeCategory || owned;
+  const oddsStr  = (tip.odds && showOdds) ? `<span>📈 @${tip.odds}</span>` : '';
   const stakeStr = tip.stake ? `<span>💰 ${tip.stake}u</span>` : '';
   const isFreeCategory = tip.category === 'free';
   const canSeeContent  = owned || (isFreeCategory && currentUser);

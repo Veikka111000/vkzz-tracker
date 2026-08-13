@@ -401,7 +401,16 @@
         <div class="field"><label class="field-label">Odds</label><input type="number" id="f_odds" step="0.01" placeholder="1.85"></div>
         <div class="field"><label class="field-label">Stake (u)</label><input type="number" id="f_stake" step="0.5" placeholder="2"></div>
       </div>
-      <div class="field"><label class="field-label">Price (€) *</label><input type="number" id="f_price" step="0.5" min="0" placeholder="5"></div>
+      <div class="row2">
+        <div class="field"><label class="field-label">Price (€) *</label><input type="number" id="f_price" step="0.5" min="0" placeholder="5"></div>
+        <div class="field">
+          <label class="field-label">Category</label>
+          <select id="f_category">
+            <option value="premium">Premium</option>
+            <option value="free">Free</option>
+          </select>
+        </div>
+      </div>
       <div class="field"><label class="field-label">Tip content (visible to buyers only) *</label><textarea id="f_content" placeholder="Write the tip here..."></textarea></div>
       <div class="msg-ok" id="adminOk">Tip added!</div>
       <div class="msg-err" id="adminErr"></div>
@@ -719,7 +728,7 @@ async function loadTips() {
     snap.forEach(doc => {
       const tip = doc.data();
       const card = buildTipCard(doc.id, tip, userPurchases.has(doc.id));
-      if (tip.price === 0) { freeGrid.appendChild(card); freeCount++; }
+      if (tip.category === 'free') { freeGrid.appendChild(card); freeCount++; }
       else { paidGrid.appendChild(card); paidCount++; }
     });
     if (freeCount === 0) freeGrid.innerHTML = '<div class="empty">No free tips at the moment.</div>';
@@ -1133,8 +1142,9 @@ async function submitTip() {
   const match   = document.getElementById('f_match').value.trim();
   const odds    = parseFloat(document.getElementById('f_odds').value) || null;
   const stake   = parseFloat(document.getElementById('f_stake').value) || null;
-  const price   = parseFloat(document.getElementById('f_price').value);
-  const content = document.getElementById('f_content').value.trim();
+  const price    = parseFloat(document.getElementById('f_price').value);
+  const category = document.getElementById('f_category').value;
+  const content  = document.getElementById('f_content').value.trim();
   const okEl  = document.getElementById('adminOk');
   const errEl = document.getElementById('adminErr');
   okEl.style.display = errEl.style.display = 'none';
@@ -1142,7 +1152,7 @@ async function submitTip() {
   const btn = document.querySelector('.submit-btn');
   btn.disabled = true; btn.textContent = 'Adding...';
   try {
-    await functions.httpsCallable('addTip')({ title, sport, date, match, odds, stake, price, content });
+    await functions.httpsCallable('addTip')({ title, sport, date, match, odds, stake, price, category, content });
     okEl.style.display = 'block';
     document.querySelectorAll('.admin-form input, .admin-form textarea').forEach(el => el.value = '');
     tipsLoaded = false;

@@ -136,14 +136,14 @@ exports.addTip = onCall({ cors: true }, async (request) => {
   if (!request.auth || request.auth.uid !== ADMIN_UID)
     throw new HttpsError("permission-denied", "Ei oikeuksia.");
 
-  const { title, sport, match, date, odds, stake, price, content } = request.data;
+  const { title, sport, match, date, odds, stake, price, category, content } = request.data;
   if (!title || price == null || isNaN(price) || !content)
     throw new HttpsError("invalid-argument", "Fill in required fields.");
 
   const ref = await db.collection("tips").add({
     title, sport: sport || "", match: match || "", date: date || "",
     odds: odds || null, stake: stake || null,
-    price: parseFloat(price), content,
+    price: parseFloat(price), category: category || "premium", content,
     active: true, result: null,
     createdAt: admin.firestore.FieldValue.serverTimestamp(),
   });

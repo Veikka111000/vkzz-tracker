@@ -1008,20 +1008,16 @@ async function loadAdminUsers() {
 async function loadAdminArchived() {
   const list = document.getElementById('adminArchivedList');
   try {
-    const [tipsSnap, purchasesSnap, usersSnap] = await Promise.all([
+    const [tipsSnap, purchasesResult] = await Promise.all([
       db.collection('tips').where('archived','==',true).get(),
-      db.collection('purchases').get(),
-      db.collection('users').get(),
+      functions.httpsCallable('listPurchases')({}),
     ]);
     if (tipsSnap.empty) { list.innerHTML = '<div style="color:var(--muted);font-size:.85rem;padding:8px 0">No archived tips.</div>'; return; }
 
-    const users = {};
-    usersSnap.forEach(d => users[d.id] = d.data());
     const purchasesByTip = {};
-    purchasesSnap.forEach(d => {
-      const p = d.data();
+    purchasesResult.data.forEach(p => {
       if (!purchasesByTip[p.tipId]) purchasesByTip[p.tipId] = [];
-      purchasesByTip[p.tipId].push(users[p.userId]?.displayName || users[p.userId]?.email || p.userId);
+      purchasesByTip[p.tipId].push(p.userName || p.userEmail);
     });
 
     list.innerHTML = `

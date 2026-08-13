@@ -1034,21 +1034,42 @@ async function loadAdminArchived() {
         <tbody>${tipsSnap.docs.map(d => {
           const t = d.data();
           const buyers = purchasesByTip[d.id] || [];
-          return `<tr style="border-top:1px solid var(--border)" id="arch-row-${d.id}">
-            <td style="padding:8px 10px;font-weight:600;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${t.title}</td>
+          const detailId = `arch-detail-${d.id}`;
+          return `
+          <tr style="border-top:1px solid var(--border);cursor:pointer" id="arch-row-${d.id}" onclick="toggleArchiveDetail('${detailId}')">
+            <td style="padding:8px 10px;font-weight:600;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--accent)">▶ ${t.title}</td>
             <td style="padding:8px 10px;max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--muted)">${t.match || '—'}</td>
             <td style="padding:8px 10px">${t.sport || '—'}</td>
             <td style="padding:8px 10px">${t.date || '—'}</td>
             <td style="padding:8px 10px">${t.price > 0 ? t.price+'€' : 'Free'}</td>
             <td style="padding:8px 10px;font-size:.78rem;color:var(--accent)">${buyers.length ? buyers.join(', ') : '—'}</td>
-            <td style="padding:8px 10px">
+            <td style="padding:8px 10px" onclick="event.stopPropagation()">
               <button onclick="restoreTipAdmin('${d.id}', this)" style="padding:4px 10px;border-radius:6px;font-size:.75rem;cursor:pointer;border:1px solid var(--green);background:transparent;color:var(--green)">Restore</button>
+            </td>
+          </tr>
+          <tr id="${detailId}" style="display:none;background:var(--bg3)">
+            <td colspan="7" style="padding:14px 16px">
+              <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px;margin-bottom:12px;font-size:.83rem">
+                <div><span style="color:var(--muted)">Odds:</span> <strong>${t.odds || '—'}</strong></div>
+                <div><span style="color:var(--muted)">Stake:</span> <strong>${t.stake ? t.stake+'u' : '—'}</strong></div>
+                <div><span style="color:var(--muted)">Category:</span> <strong>${t.category || 'premium'}</strong></div>
+                <div><span style="color:var(--muted)">Buyers (${buyers.length}):</span> <strong>${buyers.join(', ') || '—'}</strong></div>
+              </div>
+              <div style="background:var(--bg2);border-left:3px solid var(--accent);padding:10px 14px;border-radius:6px;font-size:.85rem;line-height:1.6">${t.content || '—'}</div>
             </td>
           </tr>`;
         }).join('')}
         </tbody>
       </table>`;
   } catch(e) { list.innerHTML = `<div style="color:var(--red);font-size:.85rem">Error loading archived tips.</div>`; }
+}
+
+function toggleArchiveDetail(id) {
+  const row = document.getElementById(id);
+  const isOpen = row.style.display !== 'none';
+  row.style.display = isOpen ? 'none' : 'table-row';
+  const titleCell = row.previousElementSibling?.querySelector('td:first-child');
+  if (titleCell) titleCell.textContent = (isOpen ? '▶ ' : '▼ ') + titleCell.textContent.slice(2);
 }
 
 async function restoreTipAdmin(tipId, btn) {

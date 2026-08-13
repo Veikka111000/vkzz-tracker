@@ -220,6 +220,44 @@ exports.listUsers = onCall({ cors: true }, async (request) => {
   });
 });
 
+// ── List Purchases (admin only) ───────────────────────────────────────────────
+
+exports.listPurchases = onCall({ cors: true }, async (request) => {
+  if (!request.auth || request.auth.uid !== ADMIN_UID)
+    throw new HttpsError("permission-denied", "Ei oikeuksia.");
+
+  const [purchasesSnap, tipsSnap, usersSnap] = await Promise.all([
+    db.collection("purchases").orderBy("purchasedAt", "desc").get(),
+    db.collection("tips").get(),
+    db.collection("users").get(),
+  ]);
+
+  const tips  = {};
+  tipsSnap.forEach(d => tips[d.id] = d.data());
+  const users = {};
+  usersSnap.forEach(d => users[d.id] = d.data());
+
+  const toMs = ts => ts?._seconds ? ts._seconds * 1000 : (ts?.toMillis ? ts.toMillis() : null);
+
+  return purchasesSnap.docs.map(d => {
+    const p    = d.data();
+    const tip  = tips[p.tipId]   || {};
+    const user = users[p.userId] || {};
+    return {
+      id:           d.id,
+      tipId:        p.tipId,
+      tipTitle:     tip.title  || "—",
+      tipSport:     tip.sport  || "",
+      userId:       p.userId,
+      userName:     user.displayName || "",
+      userEmail:    user.email       || p.userId,
+      amount:       p.amount  ?? 0,
+      discountCode: p.discountCode || null,
+      purchasedAt:  toMs(p.purchasedAt),
+    };
+  });
+});
+
 // ── Delete Tip (admin only) ───────────────────────────────────────────────────
 
 exports.deleteTip = onCall({ cors: true }, async (request) => {

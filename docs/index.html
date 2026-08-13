@@ -431,6 +431,11 @@
     <!-- Code list -->
     <div id="dcList"><div class="empty" style="padding:20px">Loading codes...</div></div>
 
+    <!-- Purchases & stats -->
+    <div class="section-title" style="margin-top:48px">Purchases & Revenue</div>
+    <div id="adminPurchasesStats"></div>
+    <div id="adminPurchasesList" style="margin-top:24px"><div class="empty" style="padding:20px">Loading...</div></div>
+
     <!-- Users -->
     <div class="section-title" style="margin-top:48px">Users</div>
     <div id="adminUsersList"><div class="empty" style="padding:20px">Loading users...</div></div>
@@ -597,7 +602,7 @@ function showView(name) {
   const navEl = document.querySelector(`[data-view="${name}"]`);
   if (navEl) navEl.classList.add('active');
   if (name === 'tips' && !tipsLoaded) { tipsLoaded = true; loadTips(); }
-  if (name === 'admin') { loadDiscountCodes(); loadAdminTips(); loadAdminUsers(); }
+  if (name === 'admin') { loadDiscountCodes(); loadAdminTips(); loadAdminUsers(); loadAdminPurchases(); }
   // Close sidebar on mobile after navigation
   if (isMobile()) {
     document.getElementById('sidebar').classList.remove('open');
@@ -831,6 +836,108 @@ async function loadDiscountCodes() {
         </tbody>
       </table>`;
   } catch(e) { list.innerHTML = '<div style="color:var(--red);font-size:.85rem">Error loading codes.</div>'; }
+}
+
+async function loadAdminPurchases() {
+  const statsEl = document.getElementById('adminPurchasesStats');
+  const listEl  = document.getElementById('adminPurchasesList');
+  try {
+    const result = await functions.httpsCallable('listPurchases')({});
+    const purchases = result.data;
+
+    if (!purchases.length) {
+      statsEl.innerHTML = '';
+      listEl.innerHTML = '<div style="color:var(--muted);font-size:.85rem;padding:8px 0">No purchases yet.</div>';
+      return;
+    }
+
+    // ── Summary stats ──
+    const totalRevenue  = purchases.reduce((s, p) => s + p.amount, 0);
+    const paidPurchases = purchases.filter(p => p.amount > 0);
+    const freePurchases = purchases.filter(p => p.amount === 0);
+    const uniqueBuyers  = new Set(purchases.map(p => p.userId)).size;
+    const avgValue      = paidPurchases.length ? totalRevenue / paidPurchases.length : 0;
+
+    statsEl.innerHTML = `
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px;margin-bottom:8px">
+        <div class="card"><div class="label">Total revenue</div><div class="value neu">${totalRevenue.toFixed(2)}€</div></div>
+        <div class="card"><div class="label">Purchases</div><div class="value neu">${purchases.length}</div><div class="sub">${freePurchases.length} free</div></div>
+        <div class="card"><div class="label">Unique buyers</div><div class="value neu">${uniqueBuyers}</div></div>
+        <div class="card"><div class="label">Avg value</div><div class="value neu">${avgValue.toFixed(2)}€</div></div>
+      </div>`;
+
+    // ── Per-buyer breakdown ──
+    const byUser = {};
+    purchases.forEach(p => {
+      if (!byUser[p.userId]) byUser[p.userId] = { name: p.userName || p.userEmail, email: p.userEmail, total: 0, count: 0, codes: new Set() };
+      byUser[p.userId].total += p.amount;
+      byUser[p.userId].count++;
+      if (p.discountCode) byUser[p.userId].codes.add(p.discountCode);
+    });
+    const byUserArr = Object.values(byUser).sort((a, b) => b.total - a.total);
+
+    // ── Discount code usage ──
+    const byCodes = {};
+    purchases.filter(p => p.discountCode).forEach(p => {
+      if (!byCodes[p.discountCode]) byCodes[p.discountCode] = { count: 0, saved: 0 };
+      byCodes[p.discountCode].count++;
+    });
+
+    listEl.innerHTML = `
+      <div style="font-size:.82rem;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px">All purchases</div>
+      <table style="width:100%;max-width:800px;border-collapse:collapse;font-size:.83rem;margin-bottom:36px">
+        <thead><tr style="color:var(--muted);text-align:left">
+          <th style="padding:6px 10px">Date</th>
+          <th style="padding:6px 10px">Buyer</th>
+          <th style="padding:6px 10px">Tip</th>
+          <th style="padding:6px 10px">Amount</th>
+          <th style="padding:6px 10px">Discount code</th>
+        </tr></thead>
+        <tbody>${purchases.map(p => `
+          <tr style="border-top:1px solid var(--border)">
+            <td style="padding:8px 10px;color:var(--muted)">${p.purchasedAt ? new Date(p.purchasedAt).toLocaleDateString('fi') : '—'}</td>
+            <td style="padding:8px 10px"><div style="font-weight:600">${p.userName || '—'}</div><div style="font-size:.75rem;color:var(--muted)">${p.userEmail}</div></td>
+            <td style="padding:8px 10px;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${p.tipTitle}</td>
+            <td style="padding:8px 10px;font-weight:600;color:${p.amount > 0 ? 'var(--green)' : 'var(--muted)'}">${p.amount > 0 ? p.amount.toFixed(2)+'€' : 'Free'}</td>
+            <td style="padding:8px 10px;color:var(--accent)">${p.discountCode || '—'}</td>
+          </tr>`).join('')}
+        </tbody>
+      </table>
+
+      <div style="font-size:.82rem;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px">Per buyer</div>
+      <table style="width:100%;max-width:600px;border-collapse:collapse;font-size:.83rem;margin-bottom:36px">
+        <thead><tr style="color:var(--muted);text-align:left">
+          <th style="padding:6px 10px">Buyer</th>
+          <th style="padding:6px 10px">Purchases</th>
+          <th style="padding:6px 10px">Total spent</th>
+          <th style="padding:6px 10px">Codes used</th>
+        </tr></thead>
+        <tbody>${byUserArr.map(u => `
+          <tr style="border-top:1px solid var(--border)">
+            <td style="padding:8px 10px"><div style="font-weight:600">${u.name}</div><div style="font-size:.75rem;color:var(--muted)">${u.email}</div></td>
+            <td style="padding:8px 10px">${u.count}</td>
+            <td style="padding:8px 10px;font-weight:600">${u.total.toFixed(2)}€</td>
+            <td style="padding:8px 10px;color:var(--accent)">${[...u.codes].join(', ') || '—'}</td>
+          </tr>`).join('')}
+        </tbody>
+      </table>
+
+      ${Object.keys(byCodes).length ? `
+      <div style="font-size:.82rem;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px">Discount code usage</div>
+      <table style="width:100%;max-width:400px;border-collapse:collapse;font-size:.83rem">
+        <thead><tr style="color:var(--muted);text-align:left">
+          <th style="padding:6px 10px">Code</th>
+          <th style="padding:6px 10px">Times used</th>
+        </tr></thead>
+        <tbody>${Object.entries(byCodes).sort((a,b)=>b[1].count-a[1].count).map(([code,v]) => `
+          <tr style="border-top:1px solid var(--border)">
+            <td style="padding:8px 10px;font-weight:600;color:var(--accent)">${code}</td>
+            <td style="padding:8px 10px">${v.count}</td>
+          </tr>`).join('')}
+        </tbody>
+      </table>` : ''}`;
+
+  } catch(e) { statsEl.innerHTML = ''; listEl.innerHTML = `<div style="color:var(--red);font-size:.85rem">Error: ${e.message}</div>`; }
 }
 
 async function loadAdminUsers() {

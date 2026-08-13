@@ -399,7 +399,7 @@
         <div class="field"><label class="field-label">Odds</label><input type="number" id="f_odds" step="0.01" placeholder="1.85"></div>
         <div class="field"><label class="field-label">Stake (u)</label><input type="number" id="f_stake" step="0.5" placeholder="2"></div>
       </div>
-      <div class="field"><label class="field-label">Price (€) *</label><input type="number" id="f_price" step="0.5" min="1" placeholder="5"></div>
+      <div class="field"><label class="field-label">Price (€) *</label><input type="number" id="f_price" step="0.5" min="0" placeholder="5"></div>
       <div class="field"><label class="field-label">Tip content (visible to buyers only) *</label><textarea id="f_content" placeholder="Write the tip here..."></textarea></div>
       <div class="msg-ok" id="adminOk">Tip added!</div>
       <div class="msg-err" id="adminErr"></div>
@@ -727,14 +727,15 @@ function buildTipCard(tipId, tip, owned) {
   if (owned) {
     actionHtml = `<div class="bought-badge">✓ Purchased</div>`;
   } else if (currentUser) {
+    const isFree = tip.price === 0;
     actionHtml = `
       <div style="display:flex;flex-direction:column;gap:7px;align-items:flex-end">
-        <button class="buy-btn" onclick="buyTip('${tipId}', '${tip.price}', this)">Buy ${tip.price}€</button>
-        <span style="font-size:.75rem;color:var(--muted);cursor:pointer;text-decoration:underline" onclick="toggleDiscountInput('${tipId}')">Discount code?</span>
+        <button class="buy-btn" onclick="buyTip('${tipId}', '${tip.price}', this)">${isFree ? 'Get for free' : 'Buy ' + tip.price + '€'}</button>
+        ${!isFree ? `<span style="font-size:.75rem;color:var(--muted);cursor:pointer;text-decoration:underline" onclick="toggleDiscountInput('${tipId}')">Discount code?</span>
         <div id="dc-wrap-${tipId}" style="display:none;flex-direction:column;gap:5px;align-items:flex-end">
           <input id="dc-input-${tipId}" type="text" placeholder="Code" style="background:var(--bg3);border:1px solid var(--border);border-radius:6px;color:var(--text);padding:6px 10px;font-size:.82rem;outline:none;width:120px;text-transform:uppercase">
           <span id="dc-msg-${tipId}" style="font-size:.75rem;color:var(--muted)"></span>
-        </div>
+        </div>` : `<span id="dc-msg-${tipId}" style="font-size:.75rem;color:var(--muted)"></span>`}
       </div>`;
   } else {
     actionHtml = `<button class="buy-btn" onclick="showView('login')">Log in</button>`;
@@ -751,7 +752,7 @@ function buildTipCard(tipId, tip, owned) {
       ${contentHtml}
     </div>
     <div class="tip-side">
-      <div><div class="price" id="price-${tipId}">${tip.price}€</div></div>
+      <div><div class="price" id="price-${tipId}">${tip.price === 0 ? 'Free' : tip.price + '€'}</div></div>
       ${actionHtml}
     </div>`;
   return card;
@@ -1122,7 +1123,7 @@ async function submitTip() {
   const okEl  = document.getElementById('adminOk');
   const errEl = document.getElementById('adminErr');
   okEl.style.display = errEl.style.display = 'none';
-  if (!title || !price || !content) { errEl.textContent = 'Fill in required fields.'; errEl.style.display='block'; return; }
+  if (!title || price === null || isNaN(price) || !content) { errEl.textContent = 'Fill in required fields.'; errEl.style.display='block'; return; }
   const btn = document.querySelector('.submit-btn');
   btn.disabled = true; btn.textContent = 'Adding...';
   try {

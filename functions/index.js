@@ -53,8 +53,8 @@ exports.createCheckoutSession = onCall({ cors: true }, async (request) => {
 
   const { finalPrice, discountLabel, codeDoc, isFree } = await applyDiscount(discountCode, tip.price);
 
-  // 100% discount → skip Stripe, record free purchase directly
-  if (isFree) {
+  // Free tip (price 0 or 100% discount) → skip Stripe, record free purchase directly
+  if (isFree || tip.price === 0) {
     await db.collection("purchases").add({
       tipId,
       userId: request.auth.uid,

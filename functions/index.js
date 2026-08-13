@@ -267,6 +267,21 @@ exports.deleteTip = onCall({ cors: true }, async (request) => {
   const { tipId } = request.data;
   if (!tipId) throw new HttpsError("invalid-argument", "tipId puuttuu.");
 
-  await db.collection("tips").doc(tipId).delete();
+  await db.collection("tips").doc(tipId).update({
+    active: false,
+    archived: true,
+    archivedAt: admin.firestore.FieldValue.serverTimestamp(),
+  });
+  return { ok: true };
+});
+
+// ── Restore Tip (admin only) ──────────────────────────────────────────────────
+
+exports.restoreTip = onCall({ cors: true }, async (request) => {
+  if (!request.auth || request.auth.uid !== ADMIN_UID)
+    throw new HttpsError("permission-denied", "Ei oikeuksia.");
+
+  const { tipId } = request.data;
+  await db.collection("tips").doc(tipId).update({ active: true, archived: false });
   return { ok: true };
 });

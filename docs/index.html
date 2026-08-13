@@ -442,6 +442,10 @@
     <!-- Code list -->
     <div id="dcList"><div class="empty" style="padding:20px">Loading codes...</div></div>
 
+    <!-- Archived tips -->
+    <div class="section-title" style="margin-top:48px">Archived tips</div>
+    <div id="adminArchivedList"><div class="empty" style="padding:20px">Loading...</div></div>
+
     <!-- Purchases & stats -->
     <div class="section-title" style="margin-top:48px">Purchases & Revenue</div>
     <div id="adminPurchasesStats"></div>
@@ -613,7 +617,7 @@ function showView(name) {
   const navEl = document.querySelector(`[data-view="${name}"]`);
   if (navEl) navEl.classList.add('active');
   if (name === 'tips' && !tipsLoaded) { tipsLoaded = true; loadTips(); }
-  if (name === 'admin') { loadDiscountCodes(); loadAdminTips(); loadAdminUsers(); loadAdminPurchases(); }
+  if (name === 'admin') { loadDiscountCodes(); loadAdminTips(); loadAdminArchived(); loadAdminUsers(); loadAdminPurchases(); }
   // Close sidebar on mobile after navigation
   if (isMobile()) {
     document.getElementById('sidebar').classList.remove('open');
@@ -999,6 +1003,69 @@ async function loadAdminUsers() {
         </tbody>
       </table>`;
   } catch(e) { list.innerHTML = '<div style="color:var(--red);font-size:.85rem">Error loading users.</div>'; }
+}
+
+async function loadAdminArchived() {
+  const list = document.getElementById('adminArchivedList');
+  try {
+    const [tipsSnap, purchasesSnap, usersSnap] = await Promise.all([
+      db.collection('tips').where('archived','==',true).get(),
+      db.collection('purchases').get(),
+      db.collection('users').get(),
+    ]);
+    if (tipsSnap.empty) { list.innerHTML = '<div style="color:var(--muted);font-size:.85rem;padding:8px 0">No archived tips.</div>'; return; }
+
+    const users = {};
+    usersSnap.forEach(d => users[d.id] = d.data());
+    const purchasesByTip = {};
+    purchasesSnap.forEach(d => {
+      const p = d.data();
+      if (!purchasesByTip[p.tipId]) purchasesByTip[p.tipId] = [];
+      purchasesByTip[p.tipId].push(users[p.userId]?.displayName || users[p.userId]?.email || p.userId);
+    });
+
+    list.innerHTML = `
+      <table style="width:100%;max-width:800px;border-collapse:collapse;font-size:.83rem">
+        <thead><tr style="color:var(--muted);text-align:left">
+          <th style="padding:6px 10px">Title</th>
+          <th style="padding:6px 10px">Match</th>
+          <th style="padding:6px 10px">Sport</th>
+          <th style="padding:6px 10px">Date</th>
+          <th style="padding:6px 10px">Price</th>
+          <th style="padding:6px 10px">Buyers</th>
+          <th style="padding:6px 10px"></th>
+        </tr></thead>
+        <tbody>${tipsSnap.docs.map(d => {
+          const t = d.data();
+          const buyers = purchasesByTip[d.id] || [];
+          return `<tr style="border-top:1px solid var(--border)" id="arch-row-${d.id}">
+            <td style="padding:8px 10px;font-weight:600;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${t.title}</td>
+            <td style="padding:8px 10px;max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--muted)">${t.match || '—'}</td>
+            <td style="padding:8px 10px">${t.sport || '—'}</td>
+            <td style="padding:8px 10px">${t.date || '—'}</td>
+            <td style="padding:8px 10px">${t.price > 0 ? t.price+'€' : 'Free'}</td>
+            <td style="padding:8px 10px;font-size:.78rem;color:var(--accent)">${buyers.length ? buyers.join(', ') : '—'}</td>
+            <td style="padding:8px 10px">
+              <button onclick="restoreTipAdmin('${d.id}', this)" style="padding:4px 10px;border-radius:6px;font-size:.75rem;cursor:pointer;border:1px solid var(--green);background:transparent;color:var(--green)">Restore</button>
+            </td>
+          </tr>`;
+        }).join('')}
+        </tbody>
+      </table>`;
+  } catch(e) { list.innerHTML = `<div style="color:var(--red);font-size:.85rem">Error loading archived tips.</div>`; }
+}
+
+async function restoreTipAdmin(tipId, btn) {
+  btn.disabled = true; btn.textContent = '...';
+  try {
+    await functions.httpsCallable('restoreTip')({ tipId });
+    document.getElementById('arch-row-' + tipId)?.remove();
+    tipsLoaded = false;
+    loadAdminTips();
+  } catch(e) {
+    btn.disabled = false; btn.textContent = 'Restore';
+    alert(e.message || 'Error restoring tip.');
+  }
 }
 
 async function loadAdminTips() {

@@ -694,8 +694,11 @@ function updateResults() {
   document.getElementById('statRecord').textContent   = `${wins}–${pushes}–${losses}`;
   document.getElementById('statRecordSub').textContent = `${fmt(winPct,1)}% win rate`;
 
-  // Chart always shows full cumulative history for the selected sport, by day
-  const chartBets = ALL_BETS.filter(b => activeSport === 'all' || b.sport === activeSport);
+  // Chart: cumulative by day, filtered by sport + active month if set
+  const chartBets = ALL_BETS.filter(b =>
+    (activeSport === 'all' || b.sport === activeSport) &&
+    (activeMonth === 'all' || b.ym === activeMonth)
+  );
   const dayMap = {};
   chartBets.forEach(b => { dayMap[b.date] = (dayMap[b.date] || 0) + b.pl; });
   updateChart(Object.entries(dayMap).sort((a,b) => a[0].localeCompare(b[0])));

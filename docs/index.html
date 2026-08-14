@@ -366,7 +366,7 @@
       <div class="card"><div class="label">Record</div><div class="value neu" id="statRecord" style="font-size:1.1rem;white-space:nowrap">—</div><div class="sub" id="statRecordSub"></div></div>
     </div>
     <div class="chart-wrap">
-      <h2>Monthly P/L (u)</h2>
+      <h2>Cumulative P/L (u)</h2>
       <canvas id="plChart"></canvas>
     </div>
     <div style="font-size:.78rem;color:var(--muted);line-height:1.7;padding:4px 2px;border-top:1px solid var(--border);padding-top:16px">
@@ -694,21 +694,35 @@ function updateResults() {
   document.getElementById('statRecord').textContent   = `${wins}–${pushes}–${losses}`;
   document.getElementById('statRecordSub').textContent = `${fmt(winPct,1)}% win rate`;
 
-  const monthMap = {};
-  (activeMonth === 'all' ? ALL_MONTHS : [activeMonth]).forEach(ym => monthMap[ym] = 0);
-  bets.forEach(b => { if (monthMap[b.ym] !== undefined) monthMap[b.ym] += b.pl; });
-  updateChart(Object.entries(monthMap));
+  // Chart always shows full cumulative history for the selected sport
+  const chartBets = ALL_BETS.filter(b => activeSport === 'all' || b.sport === activeSport);
+  const chartMap = {};
+  ALL_MONTHS.forEach(ym => chartMap[ym] = 0);
+  chartBets.forEach(b => { chartMap[b.ym] += b.pl; });
+  updateChart(Object.entries(chartMap));
 }
 
 function updateChart(entries) {
-  const labels  = entries.map(([ym]) => { const [y,m]=ym.split('-'); return ['','Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][parseInt(m)]+' '+y.slice(2); });
-  const values  = entries.map(([,v]) => parseFloat(v.toFixed(4)));
-  const colors  = values.map(v => v >= 0 ? '#34d39966' : '#f8717166');
-  const borders = values.map(v => v >= 0 ? '#34d399' : '#f87171');
-  if (chart) { chart.data.labels=labels; chart.data.datasets[0].data=values; chart.data.datasets[0].backgroundColor=colors; chart.data.datasets[0].borderColor=borders; chart.update(); return; }
-  chart = new Chart(document.getElementById('plChart').getContext('2d'), {
-    type: 'bar',
-    data: { labels, datasets: [{ data: values, backgroundColor: colors, borderColor: borders, borderWidth: 1.5, borderRadius: 4 }] },
+  const labels = entries.map(([ym]) => { const [y,m]=ym.split('-'); return ['','Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][parseInt(m)]+' '+y.slice(2); });
+  let cum = 0;
+  const values = entries.map(([,v]) => parseFloat((cum += v).toFixed(4)));
+  const finalVal = values[values.length - 1] ?? 0;
+  const lineColor = finalVal >= 0 ? '#34d399' : '#f87171';
+  if (chart) {
+    chart.data.labels = labels;
+    chart.data.datasets[0].data = values;
+    chart.data.datasets[0].borderColor = lineColor;
+    chart.data.datasets[0].pointBackgroundColor = lineColor;
+    chart.update();
+    return;
+  }
+  const ctx = document.getElementById('plChart').getContext('2d');
+  const grad = ctx.createLinearGradient(0, 0, 0, 240);
+  grad.addColorStop(0, lineColor + '33');
+  grad.addColorStop(1, lineColor + '00');
+  chart = new Chart(ctx, {
+    type: 'line',
+    data: { labels, datasets: [{ data: values, borderColor: lineColor, borderWidth: 2, pointRadius: 3, pointBackgroundColor: lineColor, tension: 0.35, fill: true, backgroundColor: grad }] },
     options: {
       responsive: true,
       plugins: { legend: { display: false }, tooltip: { callbacks: { label: c => (c.parsed.y>=0?'+':'')+c.parsed.y.toFixed(2).replace('.',',')+' u' } } },

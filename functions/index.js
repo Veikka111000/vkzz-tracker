@@ -84,8 +84,8 @@ exports.createCheckoutSession = onCall({ cors: true }, async (request) => {
       quantity: 1,
     }],
     mode: "payment",
-    success_url: "https://vkzz00.github.io/vkzz-tracker/?success=1",
-    cancel_url:  "https://vkzz00.github.io/vkzz-tracker/",
+    success_url: "https://vkzzbetting.com/?success=1",
+    cancel_url:  "https://vkzzbetting.com/",
     metadata: {
       tipId,
       userId: request.auth.uid,

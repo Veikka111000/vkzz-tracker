@@ -694,16 +694,15 @@ function updateResults() {
   document.getElementById('statRecord').textContent   = `${wins}–${pushes}–${losses}`;
   document.getElementById('statRecordSub').textContent = `${fmt(winPct,1)}% win rate`;
 
-  // Chart always shows full cumulative history for the selected sport
+  // Chart always shows full cumulative history for the selected sport, by day
   const chartBets = ALL_BETS.filter(b => activeSport === 'all' || b.sport === activeSport);
-  const chartMap = {};
-  ALL_MONTHS.forEach(ym => chartMap[ym] = 0);
-  chartBets.forEach(b => { chartMap[b.ym] += b.pl; });
-  updateChart(Object.entries(chartMap));
+  const dayMap = {};
+  chartBets.forEach(b => { dayMap[b.date] = (dayMap[b.date] || 0) + b.pl; });
+  updateChart(Object.entries(dayMap).sort((a,b) => a[0].localeCompare(b[0])));
 }
 
 function updateChart(entries) {
-  const labels = entries.map(([ym]) => { const [y,m]=ym.split('-'); return ['','Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][parseInt(m)]+' '+y.slice(2); });
+  const labels = entries.map(([d]) => { const [y,m,day]=d.split('-'); return ['','Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][parseInt(m)]+' '+parseInt(day)+', '+y.slice(2); });
   let cum = 0;
   const values = entries.map(([,v]) => parseFloat((cum += v).toFixed(4)));
   const finalVal = values[values.length - 1] ?? 0;
@@ -722,7 +721,7 @@ function updateChart(entries) {
   grad.addColorStop(1, lineColor + '00');
   chart = new Chart(ctx, {
     type: 'line',
-    data: { labels, datasets: [{ data: values, borderColor: lineColor, borderWidth: 2, pointRadius: 3, pointBackgroundColor: lineColor, tension: 0.35, fill: true, backgroundColor: grad }] },
+    data: { labels, datasets: [{ data: values, borderColor: lineColor, borderWidth: 2, pointRadius: 0, pointHoverRadius: 4, pointHoverBackgroundColor: lineColor, tension: 0.2, fill: true, backgroundColor: grad }] },
     options: {
       responsive: true,
       plugins: { legend: { display: false }, tooltip: { callbacks: { label: c => (c.parsed.y>=0?'+':'')+c.parsed.y.toFixed(2).replace('.',',')+' u' } } },

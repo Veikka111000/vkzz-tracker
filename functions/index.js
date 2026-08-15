@@ -124,6 +124,27 @@ exports.stripeWebhook = onRequest({ rawBody: true }, async (req, res) => {
       await db.collection("users").doc(userId).update({
         balance: admin.firestore.FieldValue.increment(parseFloat(credited.toFixed(2))),
       });
+    } else if (session.metadata.type === "split_purchase") {
+      const { tipId, userId, balanceUsed, discountCode } = session.metadata;
+      const balUsed = parseFloat(balanceUsed);
+      await db.runTransaction(async t => {
+        const userRef = db.collection("users").doc(userId);
+        const uDoc = await t.get(userRef);
+        const currentBal = uDoc.data()?.balance || 0;
+        const actualDeduction = Math.min(currentBal, balUsed);
+        if (actualDeduction > 0)
+          t.update(userRef, { balance: admin.firestore.FieldValue.increment(-actualDeduction) });
+        t.set(db.collection("purchases").doc(), {
+          tipId, userId,
+          amount: parseFloat((session.amount_total / 100 + actualDeduction).toFixed(2)),
+          balanceUsed: actualDeduction,
+          currency: session.currency,
+          discountCode: discountCode || null,
+          stripeSessionId: session.id,
+          paidWithBalance: actualDeduction > 0,
+          purchasedAt: admin.firestore.FieldValue.serverTimestamp(),
+        });
+      });
     } else {
       const { tipId, userId, discountCode } = session.metadata;
       await db.collection("purchases").add({
@@ -407,4 +428,81 @@ exports.setTopUpBonus = onCall({ cors: true }, async (request) => {
     throw new HttpsError("invalid-argument", "bonusPercent must be 0–1000.");
   await db.collection("settings").doc("topup").set({ active: !!active, bonusPercent: parseFloat(bonusPercent) });
   return { ok: true };
+});
+
+// ── Create Split Payment Session (balance + card) ─────────────────────────────
+
+exports.createSplitPaymentSession = onCall({ cors: true }, async (request) => {
+  if (!request.auth) throw new HttpsError("unauthenticated", "Please log in.");
+  const { tipId, discountCode } = request.data;
+
+  const tipDoc = await db.collection("tips").doc(tipId).get();
+  if (!tipDoc.exists || !tipDoc.data().active)
+    throw new HttpsError("not-found", "Tip not found.");
+  const tip = tipDoc.data();
+
+  const existing = await db.collection("purchases")
+    .where("userId", "==", request.auth.uid).where("tipId", "==", tipId).limit(1).get();
+  if (!existing.empty) throw new HttpsError("already-exists", "You already purchased this tip.");
+
+  const { finalPrice, codeDoc, isFree } = await applyDiscount(discountCode, tip.price);
+
+  if (isFree || finalPrice <= 0) {
+    await db.collection("purchases").add({
+      tipId, userId: request.auth.uid, amount: 0, currency: "eur",
+      discountCode: discountCode ? discountCode.toUpperCase() : null,
+      stripeSessionId: null, purchasedAt: admin.firestore.FieldValue.serverTimestamp(),
+    });
+    if (codeDoc) await codeDoc.update({ usedCount: admin.firestore.FieldValue.increment(1) });
+    return { free: true };
+  }
+
+  const userDoc = await db.collection("users").doc(request.auth.uid).get();
+  const balance = userDoc.data()?.balance || 0;
+  const balanceUsed = parseFloat(Math.min(balance, finalPrice).toFixed(2));
+  const stripeAmount = parseFloat((finalPrice - balanceUsed).toFixed(2));
+
+  if (stripeAmount < 0.5) {
+    // Remainder below Stripe minimum — pay entirely with balance
+    await db.runTransaction(async t => {
+      const userRef = db.collection("users").doc(request.auth.uid);
+      const uDoc = await t.get(userRef);
+      const bal = uDoc.data()?.balance || 0;
+      if (bal < finalPrice) throw new HttpsError("failed-precondition", "Insufficient balance.");
+      t.update(userRef, { balance: admin.firestore.FieldValue.increment(-finalPrice) });
+      t.set(db.collection("purchases").doc(), {
+        tipId, userId: request.auth.uid, amount: finalPrice, currency: "eur",
+        discountCode: discountCode ? discountCode.toUpperCase() : null,
+        stripeSessionId: null, paidWithBalance: true,
+        purchasedAt: admin.firestore.FieldValue.serverTimestamp(),
+      });
+    });
+    if (codeDoc) await codeDoc.update({ usedCount: admin.firestore.FieldValue.increment(1) });
+    return { free: true };
+  }
+
+  const stripe = require("stripe")(STRIPE_SECRET);
+  const session = await stripe.checkout.sessions.create({
+    payment_method_types: ["card"],
+    line_items: [{
+      price_data: {
+        currency: "eur",
+        product_data: { name: `${tip.title} (${balanceUsed.toFixed(2)}€ from balance + ${stripeAmount.toFixed(2)}€ card)` },
+        unit_amount: Math.round(stripeAmount * 100),
+      },
+      quantity: 1,
+    }],
+    mode: "payment",
+    success_url: "https://vkzzbetting.com/?success=1",
+    cancel_url:  "https://vkzzbetting.com/",
+    metadata: {
+      type: "split_purchase",
+      tipId, userId: request.auth.uid,
+      balanceUsed: String(balanceUsed),
+      discountCode: discountCode ? discountCode.toUpperCase() : "",
+    },
+  });
+
+  if (codeDoc) await codeDoc.update({ usedCount: admin.firestore.FieldValue.increment(1) });
+  return { url: session.url };
 });

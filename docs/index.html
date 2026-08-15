@@ -716,17 +716,34 @@ let balanceUnsub = null;
 function updateBalanceDisplay(bal) {
   userBalance = typeof bal === 'number' ? bal : 0;
   document.getElementById('balanceAmount').textContent = userBalance.toFixed(2) + '€';
-  // Update all balance-pay buttons on tips page without full reload
+  // Update existing balance buttons
   document.querySelectorAll('.bal-pay-btn').forEach(btn => {
     const price = parseFloat(btn.dataset.price);
-    btn.style.display = (userBalance >= price && price > 0) ? '' : 'none';
-    btn.textContent = `Pay with balance (${userBalance.toFixed(2)}€)`;
+    const tipId = btn.dataset.tipid;
+    if (userBalance >= price) {
+      btn.dataset.split = '';
+      btn.onclick = () => buyWithBalance(tipId, price, btn);
+      btn.textContent = `Pay with balance (${userBalance.toFixed(2)}€)`;
+      btn.style.display = '';
+    } else if (userBalance > 0) {
+      const rem = (price - userBalance).toFixed(2);
+      btn.dataset.split = '1';
+      btn.onclick = () => buySplit(tipId, price, btn);
+      btn.textContent = `${userBalance.toFixed(2)}€ balance + ${rem}€ card`;
+      btn.style.display = '';
+    } else {
+      btn.style.display = 'none';
+    }
   });
-  // Show balance buttons that were hidden because balance was 0 at render time
+  // Activate placeholders when balance changes
   document.querySelectorAll('.bal-pay-placeholder').forEach(el => {
     const price = parseFloat(el.dataset.price);
+    const tipId = el.dataset.tipid;
     if (userBalance >= price && price > 0) {
-      el.outerHTML = `<button class="bal-pay-btn" data-price="${price}" data-tipid="${el.dataset.tipid}" onclick="buyWithBalance('${el.dataset.tipid}','${price}',this)">Pay with balance (${userBalance.toFixed(2)}€)</button>`;
+      el.outerHTML = `<button class="bal-pay-btn" data-price="${price}" data-tipid="${tipId}" onclick="buyWithBalance('${tipId}','${price}',this)">Pay with balance (${userBalance.toFixed(2)}€)</button>`;
+    } else if (userBalance > 0 && price > 0) {
+      const rem = (price - userBalance).toFixed(2);
+      el.outerHTML = `<button class="bal-pay-btn split" data-price="${price}" data-tipid="${tipId}" data-split="1" onclick="buySplit('${tipId}','${price}',this)">${userBalance.toFixed(2)}€ balance + ${rem}€ card</button>`;
     }
   });
 }
@@ -1029,13 +1046,18 @@ function buildTipCard(tipId, tip, owned) {
   } else if (owned) {
     actionHtml = `<div class="bought-badge">✓ Purchased</div>`;
   } else if (currentUser) {
-    const hasBalance = userBalance >= tip.price && tip.price > 0;
-    const balBtn = hasBalance
-      ? `<button class="bal-pay-btn" data-price="${tip.price}" data-tipid="${tipId}" onclick="buyWithBalance('${tipId}','${tip.price}',this)">Pay with balance (${userBalance.toFixed(2)}€)</button>`
-      : `<span class="bal-pay-placeholder" data-price="${tip.price}" data-tipid="${tipId}"></span>`;
+    const price = parseFloat(tip.price);
+    const hasFullBalance = userBalance >= price && price > 0;
+    const hasSplitBalance = userBalance > 0 && userBalance < price && price > 0;
+    const splitRemainder = hasSplitBalance ? (price - userBalance).toFixed(2) : null;
+    const balBtn = hasFullBalance
+      ? `<button class="bal-pay-btn" data-price="${price}" data-tipid="${tipId}" onclick="buyWithBalance('${tipId}','${price}',this)">Pay with balance (${userBalance.toFixed(2)}€)</button>`
+      : hasSplitBalance
+        ? `<button class="bal-pay-btn split" data-price="${price}" data-tipid="${tipId}" data-split="1" onclick="buySplit('${tipId}','${price}',this)">${userBalance.toFixed(2)}€ balance + ${splitRemainder}€ card</button>`
+        : `<span class="bal-pay-placeholder" data-price="${price}" data-tipid="${tipId}"></span>`;
     actionHtml = `
       <div style="display:flex;flex-direction:column;gap:7px;align-items:flex-end">
-        <button class="buy-btn" id="buy-btn-${tipId}" onclick="buyTip('${tipId}', '${tip.price}', this)">Buy ${tip.price}€</button>
+        <button class="buy-btn" id="buy-btn-${tipId}" onclick="buyTip('${tipId}', '${price}', this)">Buy ${price}€</button>
         ${balBtn}
         <span style="font-size:.75rem;color:var(--muted);cursor:pointer;text-decoration:underline" onclick="toggleDiscountInput('${tipId}')">Discount code?</span>
         <div id="dc-wrap-${tipId}" style="display:none;flex-direction:column;gap:5px;align-items:flex-end">
@@ -1097,6 +1119,7 @@ async function buyWithBalance(tipId, basePrice, btn) {
   if (!currentUser) { showView('login'); return; }
   const codeInput = document.getElementById(`dc-input-${tipId}`);
   const discountCode = codeInput ? codeInput.value.trim().toUpperCase() : '';
+  const origText = btn.textContent;
   btn.disabled = true; btn.textContent = 'Please wait...';
   const buyBtn = document.getElementById(`buy-btn-${tipId}`);
   if (buyBtn) buyBtn.disabled = true;
@@ -1107,7 +1130,34 @@ async function buyWithBalance(tipId, basePrice, btn) {
     document.getElementById('successNotice').style.display = 'block';
     showView('tips');
   } catch(e) {
-    btn.disabled = false; btn.textContent = `Pay with balance (${userBalance.toFixed(2)}€)`;
+    btn.disabled = false; btn.textContent = origText;
+    if (buyBtn) buyBtn.disabled = false;
+    const msgEl = document.getElementById(`dc-msg-${tipId}`);
+    if (msgEl) { msgEl.textContent = e.message || 'An error occurred.'; msgEl.style.color = 'var(--red)'; }
+    else alert(e.message || 'Something went wrong.');
+  }
+}
+
+async function buySplit(tipId, basePrice, btn) {
+  if (!currentUser) { showView('login'); return; }
+  const codeInput = document.getElementById(`dc-input-${tipId}`);
+  const discountCode = codeInput ? codeInput.value.trim().toUpperCase() : '';
+  const origText = btn.textContent;
+  btn.disabled = true; btn.textContent = 'Please wait...';
+  const buyBtn = document.getElementById(`buy-btn-${tipId}`);
+  if (buyBtn) buyBtn.disabled = true;
+  try {
+    const result = await functions.httpsCallable('createSplitPaymentSession')({ tipId, discountCode: discountCode || null });
+    if (result.data.free) {
+      userPurchases.add(tipId);
+      tipsLoaded = false;
+      document.getElementById('successNotice').style.display = 'block';
+      showView('tips');
+    } else {
+      window.location.href = result.data.url;
+    }
+  } catch(e) {
+    btn.disabled = false; btn.textContent = origText;
     if (buyBtn) buyBtn.disabled = false;
     const msgEl = document.getElementById(`dc-msg-${tipId}`);
     if (msgEl) { msgEl.textContent = e.message || 'An error occurred.'; msgEl.style.color = 'var(--red)'; }

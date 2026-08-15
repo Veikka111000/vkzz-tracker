@@ -1262,14 +1262,23 @@ async function loadAdminPurchases() {
         <div class="card"><div class="label">Avg value</div><div class="value neu">${avgValue.toFixed(2)}€</div></div>
       </div>`;
 
-    // ── Per-buyer breakdown ──
+    // ── Per-buyer breakdown (purchases + top-ups) ──
     const byUser = {};
     purchases.forEach(p => {
-      if (!byUser[p.userId]) byUser[p.userId] = { name: p.userName || p.userEmail, email: p.userEmail, total: 0, count: 0, codes: new Set() };
+      if (!byUser[p.userId]) byUser[p.userId] = { name: p.userName || p.userEmail, email: p.userEmail, total: 0, topups: 0, count: 0, codes: new Set() };
       byUser[p.userId].total += p.amount;
       byUser[p.userId].count++;
       if (p.discountCode) byUser[p.userId].codes.add(p.discountCode);
     });
+    // Add top-up amounts to per-buyer totals
+    try {
+      const topupResult = await functions.httpsCallable('listTopUps')({});
+      topupResult.data.forEach(t => {
+        if (!byUser[t.userId]) byUser[t.userId] = { name: t.userName || t.userEmail, email: t.userEmail, total: 0, topups: 0, count: 0, codes: new Set() };
+        byUser[t.userId].topups += t.paid;
+        byUser[t.userId].total  += t.paid;
+      });
+    } catch(e) {}
     const byUserArr = Object.values(byUser).sort((a, b) => b.total - a.total);
 
     // ── Discount code usage ──
@@ -1312,7 +1321,7 @@ async function loadAdminPurchases() {
           <tr style="border-top:1px solid var(--border)">
             <td style="padding:8px 10px"><div style="font-weight:600">${u.name}</div><div style="font-size:.75rem;color:var(--muted)">${u.email}</div></td>
             <td style="padding:8px 10px">${u.count}</td>
-            <td style="padding:8px 10px;font-weight:600">${u.total.toFixed(2)}€</td>
+            <td style="padding:8px 10px;font-weight:600">${u.total.toFixed(2)}€${u.topups > 0 ? `<div style="font-size:.72rem;color:var(--muted);font-weight:400">incl. ${u.topups.toFixed(2)}€ top-up</div>` : ''}</td>
             <td style="padding:8px 10px;color:var(--accent)">${[...u.codes].join(', ') || '—'}</td>
           </tr>`).join('')}
         </tbody>

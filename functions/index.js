@@ -121,9 +121,20 @@ exports.stripeWebhook = onRequest({ rawBody: true }, async (req, res) => {
       const bonusSnap = await db.collection("settings").doc("topup").get();
       const bonusCfg = bonusSnap.exists ? bonusSnap.data() : { active: false, bonusPercent: 0 };
       const credited = bonusCfg.active ? paid * (1 + bonusCfg.bonusPercent / 100) : paid;
-      await db.collection("users").doc(userId).update({
-        balance: admin.firestore.FieldValue.increment(parseFloat(credited.toFixed(2))),
-      });
+      const creditedRounded = parseFloat(credited.toFixed(2));
+      await Promise.all([
+        db.collection("users").doc(userId).update({
+          balance: admin.firestore.FieldValue.increment(creditedRounded),
+        }),
+        db.collection("topups").add({
+          userId,
+          paid,
+          credited: creditedRounded,
+          bonusPercent: bonusCfg.active ? bonusCfg.bonusPercent : 0,
+          stripeSessionId: session.id,
+          createdAt: admin.firestore.FieldValue.serverTimestamp(),
+        }),
+      ]);
     } else if (session.metadata.type === "split_purchase") {
       const { tipId, userId, balanceUsed, discountCode } = session.metadata;
       const balUsed = parseFloat(balanceUsed);
@@ -505,4 +516,36 @@ exports.createSplitPaymentSession = onCall({ cors: true }, async (request) => {
 
   if (codeDoc) await codeDoc.update({ usedCount: admin.firestore.FieldValue.increment(1) });
   return { url: session.url };
+});
+
+// ── List Top-Ups (admin only) ─────────────────────────────────────────────────
+
+exports.listTopUps = onCall({ cors: true }, async (request) => {
+  if (!request.auth || request.auth.uid !== ADMIN_UID)
+    throw new HttpsError("permission-denied", "No permission.");
+
+  const [topupsSnap, usersSnap] = await Promise.all([
+    db.collection("topups").orderBy("createdAt", "desc").get(),
+    db.collection("users").get(),
+  ]);
+
+  const users = {};
+  usersSnap.forEach(d => users[d.id] = d.data());
+  const toMs = ts => ts?._seconds ? ts._seconds * 1000 : (ts?.toMillis ? ts.toMillis() : null);
+
+  return topupsSnap.docs.map(d => {
+    const t = d.data();
+    const u = users[t.userId] || {};
+    return {
+      id: d.id,
+      userId: t.userId,
+      userName: u.displayName || "",
+      userEmail: u.email || t.userId,
+      paid: t.paid,
+      credited: t.credited,
+      bonusPercent: t.bonusPercent || 0,
+      stripeSessionId: t.stripeSessionId,
+      createdAt: toMs(t.createdAt),
+    };
+  });
 });

@@ -550,6 +550,8 @@
       <div class="section-title">Purchases &amp; Revenue</div>
       <div id="adminPurchasesStats"></div>
       <div id="adminPurchasesList" style="margin-top:24px"><div class="empty" style="padding:20px">Loading...</div></div>
+      <div class="section-title" style="margin-top:48px">Balance top-ups</div>
+      <div id="adminTopupsList"><div class="empty" style="padding:20px">Loading...</div></div>
     </div>
 
     <!-- Tab: Wallet -->
@@ -1174,7 +1176,7 @@ function showAdminTab(tab) {
   document.querySelectorAll('.admin-panel').forEach(p => p.classList.toggle('active', p.id === 'ap-' + tab));
   if (tab === 'tips')      { loadDiscountCodes(); }
   if (tab === 'archive')   { loadAdminArchived(); loadAdminTips(); }
-  if (tab === 'purchases') { loadAdminPurchases(); }
+  if (tab === 'purchases') { loadAdminPurchases(); loadAdminTopUps(); }
   if (tab === 'wallet')    { loadBonusSettings(); }
   if (tab === 'users')     { loadAdminUsers(); }
 }
@@ -1331,6 +1333,41 @@ async function loadAdminPurchases() {
       </table>` : ''}`;
 
   } catch(e) { statsEl.innerHTML = ''; listEl.innerHTML = `<div style="color:var(--red);font-size:.85rem">Error: ${e.message}</div>`; }
+}
+
+async function loadAdminTopUps() {
+  const el = document.getElementById('adminTopupsList');
+  try {
+    const result = await functions.httpsCallable('listTopUps')({});
+    const topups = result.data;
+    if (!topups.length) { el.innerHTML = '<div style="color:var(--muted);font-size:.85rem;padding:8px 0">No top-ups yet.</div>'; return; }
+    const totalPaid     = topups.reduce((s, t) => s + t.paid, 0);
+    const totalCredited = topups.reduce((s, t) => s + t.credited, 0);
+    el.innerHTML = `
+      <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:20px">
+        <div class="card" style="min-width:120px"><div class="label">Total paid</div><div class="value pos">${totalPaid.toFixed(2)}€</div></div>
+        <div class="card" style="min-width:120px"><div class="label">Total credited</div><div class="value pos">${totalCredited.toFixed(2)}€</div></div>
+        <div class="card" style="min-width:120px"><div class="label">Top-ups</div><div class="value neu">${topups.length}</div></div>
+      </div>
+      <table style="width:100%;max-width:700px;border-collapse:collapse;font-size:.84rem">
+        <thead><tr style="color:var(--muted);text-align:left">
+          <th style="padding:6px 10px">Date</th>
+          <th style="padding:6px 10px">User</th>
+          <th style="padding:6px 10px">Paid</th>
+          <th style="padding:6px 10px">Credited</th>
+          <th style="padding:6px 10px">Bonus</th>
+        </tr></thead>
+        <tbody>${topups.map(t => `
+          <tr style="border-top:1px solid var(--border)">
+            <td style="padding:8px 10px;color:var(--muted)">${t.createdAt ? new Date(t.createdAt).toLocaleDateString('fi') : '—'}</td>
+            <td style="padding:8px 10px"><div style="font-weight:600">${t.userName || '—'}</div><div style="font-size:.75rem;color:var(--muted)">${t.userEmail}</div></td>
+            <td style="padding:8px 10px;font-weight:600">${t.paid.toFixed(2)}€</td>
+            <td style="padding:8px 10px;color:var(--accent);font-weight:600">${t.credited.toFixed(2)}€</td>
+            <td style="padding:8px 10px;color:var(--muted)">${t.bonusPercent > 0 ? '+' + t.bonusPercent + '%' : '—'}</td>
+          </tr>`).join('')}
+        </tbody>
+      </table>`;
+  } catch(e) { el.innerHTML = '<div style="color:var(--red);font-size:.85rem">Error loading top-ups.</div>'; }
 }
 
 async function loadAdminUsers() {

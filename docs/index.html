@@ -1243,21 +1243,25 @@ async function loadAdminUsers() {
     const users = result.data;
     if (!users.length) { list.innerHTML = '<div style="color:var(--muted);font-size:.85rem;padding:8px 0">No users yet.</div>'; return; }
     list.innerHTML = `
-      <table style="width:100%;max-width:700px;border-collapse:collapse;font-size:.85rem">
+      <table style="width:100%;max-width:780px;border-collapse:collapse;font-size:.85rem">
         <thead><tr style="color:var(--muted);text-align:left">
           <th style="padding:6px 10px">Name</th>
           <th style="padding:6px 10px">Email</th>
           <th style="padding:6px 10px">Phone</th>
+          <th style="padding:6px 10px">Balance</th>
           <th style="padding:6px 10px">Newsletter</th>
           <th style="padding:6px 10px">Registered</th>
+          <th style="padding:6px 10px">UID</th>
         </tr></thead>
         <tbody>${users.map(u => `
           <tr style="border-top:1px solid var(--border)">
             <td style="padding:8px 10px;font-weight:600">${u.displayName || '—'}</td>
             <td style="padding:8px 10px">${u.email || '—'}</td>
             <td style="padding:8px 10px">${u.phone || '—'}</td>
+            <td style="padding:8px 10px;font-weight:600;color:${u.balance > 0 ? 'var(--accent)' : 'var(--muted)'}">${u.balance.toFixed(2)}€</td>
             <td style="padding:8px 10px;color:${u.newsletter ? 'var(--green)' : 'var(--muted)'}">${u.newsletter ? 'Yes' : 'No'}</td>
             <td style="padding:8px 10px;color:var(--muted)">${u.createdAt ? new Date(u.createdAt).toLocaleDateString('fi') : '—'}</td>
+            <td style="padding:8px 10px;font-size:.72rem;color:var(--muted);font-family:monospace">${u.uid}</td>
           </tr>`).join('')}
         </tbody>
       </table>`;

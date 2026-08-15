@@ -226,6 +226,7 @@ exports.listUsers = onCall({ cors: true }, async (request) => {
       email:       u.email || "",
       phone:       u.phone || "",
       newsletter:  u.newsletter || false,
+      balance:     typeof u.balance === "number" ? u.balance : 0,
       createdAt:   u.createdAt?._seconds ? u.createdAt._seconds * 1000 : (u.createdAt?.toMillis ? u.createdAt.toMillis() : null),
     };
   });

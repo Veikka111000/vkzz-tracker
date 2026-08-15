@@ -1261,14 +1261,15 @@ async function loadAdminPurchases() {
     // ── Summary stats (cash purchases + top-ups = real money in) ──
     const cashRevenue   = cashPurchases.reduce((s, p) => s + p.amount, 0);
     const totalRevenue  = cashRevenue + totalTopUps;
-    const paidPurchases = cashPurchases.filter(p => p.amount > 0);
-    const freePurchases = cashPurchases.filter(p => p.amount === 0);
-    const uniqueBuyers  = new Set(allPurchases.map(p => p.userId)).size;
+    const balancePurchases = allPurchases.filter(p => p.paidWithBalance);
+    const freePurchases    = allPurchases.filter(p => !p.paidWithBalance && p.amount === 0);
+    const paidPurchases    = allPurchases.filter(p => !p.paidWithBalance && p.amount > 0);
+    const uniqueBuyers     = new Set(allPurchases.map(p => p.userId)).size;
 
     statsEl.innerHTML = `
       <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px;margin-bottom:8px">
         <div class="card"><div class="label">Total revenue</div><div class="value neu">${totalRevenue.toFixed(2)}€</div></div>
-        <div class="card"><div class="label">Purchases</div><div class="value neu">${allPurchases.length}</div><div class="sub">${freePurchases.length} free</div></div>
+        <div class="card"><div class="label">Purchases</div><div class="value neu">${allPurchases.length}</div><div class="sub">${paidPurchases.length} paid · ${balancePurchases.length} balance · ${freePurchases.length} free</div></div>
         <div class="card"><div class="label">Unique buyers</div><div class="value neu">${uniqueBuyers}</div></div>
         <div class="card"><div class="label">Top-ups</div><div class="value neu">${totalTopUps.toFixed(2)}€</div></div>
       </div>`;

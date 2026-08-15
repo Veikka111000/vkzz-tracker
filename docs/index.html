@@ -573,15 +573,18 @@
         <div class="msg-err" id="bonusErr"></div>
         <button class="submit-btn" onclick="submitBonus()">Save bonus settings</button>
       </div>
-      <div class="section-title">Add balance to user</div>
+      <div class="section-title">Add / remove balance</div>
       <div class="admin-form">
         <div class="row2">
           <div class="field"><label class="field-label">User ID</label><input type="text" id="ab_user" placeholder="Paste UID from Users tab"></div>
-          <div class="field"><label class="field-label">Amount (€)</label><input type="number" id="ab_amount" step="0.5" min="0.5" placeholder="e.g. 10"></div>
+          <div class="field"><label class="field-label">Amount (€, negative to remove)</label><input type="number" id="ab_amount" step="0.5" placeholder="e.g. 10 or -5"></div>
+        </div>
+        <div style="margin-bottom:8px">
+          <button class="submit-btn" style="background:var(--border);color:var(--fg);padding:6px 14px;font-size:.8rem" onclick="fillSelfUid()">Fill my UID</button>
         </div>
         <div class="msg-ok" id="abOk"></div>
         <div class="msg-err" id="abErr"></div>
-        <button class="submit-btn" onclick="submitAddBalance()">Add balance</button>
+        <button class="submit-btn" onclick="submitAddBalance()">Apply balance change</button>
       </div>
     </div>
 
@@ -1570,21 +1573,26 @@ async function submitBonus() {
   btn.disabled = false; btn.textContent = 'Save bonus settings';
 }
 
+function fillSelfUid() {
+  if (currentUser) document.getElementById('ab_user').value = currentUser.uid;
+}
+
 async function submitAddBalance() {
   const userId = document.getElementById('ab_user').value.trim();
   const amount = parseFloat(document.getElementById('ab_amount').value);
   const okEl = document.getElementById('abOk');
   const errEl = document.getElementById('abErr');
   okEl.style.display = errEl.style.display = 'none';
-  if (!userId || isNaN(amount) || amount <= 0) { errEl.textContent = 'Fill in user ID and amount.'; errEl.style.display='block'; return; }
-  const btn = event.target; btn.disabled = true; btn.textContent = 'Adding...';
+  if (!userId || isNaN(amount) || amount === 0) { errEl.textContent = 'Fill in user ID and a non-zero amount.'; errEl.style.display='block'; return; }
+  const btn = event.target; btn.disabled = true; btn.textContent = 'Applying...';
   try {
     await functions.httpsCallable('adminAddBalance')({ userId, amount });
-    okEl.textContent = `Added ${amount}€ to user.`; okEl.style.display = 'block';
+    const sign = amount > 0 ? '+' : '';
+    okEl.textContent = `${sign}${amount}€ applied to user.`; okEl.style.display = 'block';
     document.getElementById('ab_user').value = '';
     document.getElementById('ab_amount').value = '';
   } catch(e) { errEl.textContent = e.message; errEl.style.display = 'block'; }
-  btn.disabled = false; btn.textContent = 'Add balance';
+  btn.disabled = false; btn.textContent = 'Apply balance change';
 }
 
 // ── Login / Register view ──────────────────────────────────────────────────────

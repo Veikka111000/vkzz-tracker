@@ -1238,7 +1238,8 @@ async function loadAdminPurchases() {
   const listEl  = document.getElementById('adminPurchasesList');
   try {
     const result = await functions.httpsCallable('listPurchases')({});
-    const purchases = result.data;
+    // Only show cash purchases — balance-paid and free purchases excluded from revenue
+    const purchases = result.data.filter(p => !p.paidWithBalance);
 
     if (!purchases.length) {
       statsEl.innerHTML = '';

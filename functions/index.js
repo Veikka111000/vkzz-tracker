@@ -295,9 +295,10 @@ exports.listPurchases = onCall({ cors: true }, async (request) => {
       userId:       p.userId,
       userName:     user.displayName || "",
       userEmail:    user.email       || p.userId,
-      amount:       p.amount  ?? 0,
-      discountCode: p.discountCode || null,
-      purchasedAt:  toMs(p.purchasedAt),
+      amount:          p.amount  ?? 0,
+      discountCode:    p.discountCode || null,
+      paidWithBalance: p.paidWithBalance || false,
+      purchasedAt:     toMs(p.purchasedAt),
     };
   });
 });

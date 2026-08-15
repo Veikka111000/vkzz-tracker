@@ -716,6 +716,19 @@ let balanceUnsub = null;
 function updateBalanceDisplay(bal) {
   userBalance = typeof bal === 'number' ? bal : 0;
   document.getElementById('balanceAmount').textContent = userBalance.toFixed(2) + '€';
+  // Update all balance-pay buttons on tips page without full reload
+  document.querySelectorAll('.bal-pay-btn').forEach(btn => {
+    const price = parseFloat(btn.dataset.price);
+    btn.style.display = (userBalance >= price && price > 0) ? '' : 'none';
+    btn.textContent = `Pay with balance (${userBalance.toFixed(2)}€)`;
+  });
+  // Show balance buttons that were hidden because balance was 0 at render time
+  document.querySelectorAll('.bal-pay-placeholder').forEach(el => {
+    const price = parseFloat(el.dataset.price);
+    if (userBalance >= price && price > 0) {
+      el.outerHTML = `<button class="bal-pay-btn" data-price="${price}" data-tipid="${el.dataset.tipid}" onclick="buyWithBalance('${el.dataset.tipid}','${price}',this)">Pay with balance (${userBalance.toFixed(2)}€)</button>`;
+    }
+  });
 }
 
 auth.onAuthStateChanged(async user => {
@@ -1017,10 +1030,13 @@ function buildTipCard(tipId, tip, owned) {
     actionHtml = `<div class="bought-badge">✓ Purchased</div>`;
   } else if (currentUser) {
     const hasBalance = userBalance >= tip.price && tip.price > 0;
+    const balBtn = hasBalance
+      ? `<button class="bal-pay-btn" data-price="${tip.price}" data-tipid="${tipId}" onclick="buyWithBalance('${tipId}','${tip.price}',this)">Pay with balance (${userBalance.toFixed(2)}€)</button>`
+      : `<span class="bal-pay-placeholder" data-price="${tip.price}" data-tipid="${tipId}"></span>`;
     actionHtml = `
       <div style="display:flex;flex-direction:column;gap:7px;align-items:flex-end">
         <button class="buy-btn" id="buy-btn-${tipId}" onclick="buyTip('${tipId}', '${tip.price}', this)">Buy ${tip.price}€</button>
-        ${hasBalance ? `<button class="bal-pay-btn" id="bal-btn-${tipId}" onclick="buyWithBalance('${tipId}', '${tip.price}', this)">Pay with balance (${userBalance.toFixed(2)}€)</button>` : ''}
+        ${balBtn}
         <span style="font-size:.75rem;color:var(--muted);cursor:pointer;text-decoration:underline" onclick="toggleDiscountInput('${tipId}')">Discount code?</span>
         <div id="dc-wrap-${tipId}" style="display:none;flex-direction:column;gap:5px;align-items:flex-end">
           <input id="dc-input-${tipId}" type="text" placeholder="Code" style="background:var(--bg3);border:1px solid var(--border);border-radius:6px;color:var(--text);padding:6px 10px;font-size:.82rem;outline:none;width:120px;text-transform:uppercase">

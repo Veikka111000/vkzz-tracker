@@ -296,6 +296,7 @@ exports.listPurchases = onCall({ cors: true }, async (request) => {
       userName:     user.displayName || "",
       userEmail:    user.email       || p.userId,
       amount:          p.amount  ?? 0,
+      balanceUsed:     p.balanceUsed ?? 0,
       discountCode:    p.discountCode || null,
       paidWithBalance: p.paidWithBalance || false,
       purchasedAt:     toMs(p.purchasedAt),
@@ -417,9 +418,12 @@ exports.adminAddBalance = onCall({ cors: true }, async (request) => {
   const { userId, amount } = request.data;
   if (!userId || amount == null || isNaN(amount))
     throw new HttpsError("invalid-argument", "userId and amount required.");
-  await db.collection("users").doc(userId).update({
-    balance: admin.firestore.FieldValue.increment(parseFloat(parseFloat(amount).toFixed(2))),
-  });
+  const delta = parseFloat(parseFloat(amount).toFixed(2));
+  // Use set+merge so it works even if the user doc doesn't exist yet (e.g. admin account)
+  await db.collection("users").doc(userId).set(
+    { balance: admin.firestore.FieldValue.increment(delta) },
+    { merge: true }
+  );
   return { ok: true };
 });
 

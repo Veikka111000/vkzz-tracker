@@ -1311,9 +1311,12 @@ async function loadAdminPurchases() {
             <td style="padding:8px 10px;color:var(--muted)">${p.purchasedAt ? new Date(p.purchasedAt).toLocaleDateString('fi') : '—'}</td>
             <td style="padding:8px 10px"><div style="font-weight:600">${p.userName || '—'}</div><div style="font-size:.75rem;color:var(--muted)">${p.userEmail}</div></td>
             <td style="padding:8px 10px;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${p.tipTitle}</td>
-            <td style="padding:8px 10px;font-weight:600">${p.paidWithBalance
-              ? `<span style="color:var(--accent)">Balance</span>`
-              : p.amount > 0 ? `<span style="color:var(--green)">${p.amount.toFixed(2)}€</span>` : '<span style="color:var(--muted)">Free</span>'
+            <td style="padding:8px 10px;font-weight:600">${
+              p.paidWithBalance && p.amount > 0
+                ? `<span style="color:var(--accent)">${(p.balanceUsed||0).toFixed(2)}€ bal</span> <span style="color:var(--muted)">+</span> <span style="color:var(--green)">${p.amount.toFixed(2)}€</span>`
+                : p.paidWithBalance
+                  ? `<span style="color:var(--accent)">Balance</span>`
+                  : p.amount > 0 ? `<span style="color:var(--green)">${p.amount.toFixed(2)}€</span>` : '<span style="color:var(--muted)">Free</span>'
             }</td>
             <td style="padding:8px 10px;color:var(--accent)">${p.discountCode || '—'}</td>
           </tr>`).join('')}

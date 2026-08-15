@@ -1241,33 +1241,33 @@ async function loadAdminPurchases() {
   const listEl  = document.getElementById('adminPurchasesList');
   try {
     const result = await functions.httpsCallable('listPurchases')({});
-    // Only show cash purchases — balance-paid and free purchases excluded from revenue
-    const purchases = result.data.filter(p => !p.paidWithBalance);
+    const allPurchases  = result.data;
+    const cashPurchases = allPurchases.filter(p => !p.paidWithBalance);
 
-    if (!purchases.length) {
+    if (!allPurchases.length) {
       statsEl.innerHTML = '';
       listEl.innerHTML = '<div style="color:var(--muted);font-size:.85rem;padding:8px 0">No purchases yet.</div>';
       return;
     }
 
-    // ── Summary stats ──
-    const totalRevenue  = purchases.reduce((s, p) => s + p.amount, 0);
-    const paidPurchases = purchases.filter(p => p.amount > 0);
-    const freePurchases = purchases.filter(p => p.amount === 0);
-    const uniqueBuyers  = new Set(purchases.map(p => p.userId)).size;
+    // ── Summary stats (cash only) ──
+    const totalRevenue  = cashPurchases.reduce((s, p) => s + p.amount, 0);
+    const paidPurchases = cashPurchases.filter(p => p.amount > 0);
+    const freePurchases = cashPurchases.filter(p => p.amount === 0);
+    const uniqueBuyers  = new Set(allPurchases.map(p => p.userId)).size;
     const avgValue      = paidPurchases.length ? totalRevenue / paidPurchases.length : 0;
 
     statsEl.innerHTML = `
       <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px;margin-bottom:8px">
         <div class="card"><div class="label">Total revenue</div><div class="value neu">${totalRevenue.toFixed(2)}€</div></div>
-        <div class="card"><div class="label">Purchases</div><div class="value neu">${purchases.length}</div><div class="sub">${freePurchases.length} free</div></div>
+        <div class="card"><div class="label">Purchases</div><div class="value neu">${allPurchases.length}</div><div class="sub">${freePurchases.length} free</div></div>
         <div class="card"><div class="label">Unique buyers</div><div class="value neu">${uniqueBuyers}</div></div>
         <div class="card"><div class="label">Avg value</div><div class="value neu">${avgValue.toFixed(2)}€</div></div>
       </div>`;
 
-    // ── Per-buyer breakdown (purchases + top-ups) ──
+    // ── Per-buyer breakdown (cash purchases + top-ups) ──
     const byUser = {};
-    purchases.forEach(p => {
+    cashPurchases.forEach(p => {
       if (!byUser[p.userId]) byUser[p.userId] = { name: p.userName || p.userEmail, email: p.userEmail, total: 0, topups: 0, count: 0, codes: new Set() };
       byUser[p.userId].total += p.amount;
       byUser[p.userId].count++;
@@ -1286,7 +1286,7 @@ async function loadAdminPurchases() {
 
     // ── Discount code usage ──
     const byCodes = {};
-    purchases.filter(p => p.discountCode).forEach(p => {
+    cashPurchases.filter(p => p.discountCode).forEach(p => {
       if (!byCodes[p.discountCode]) byCodes[p.discountCode] = { count: 0, saved: 0 };
       byCodes[p.discountCode].count++;
     });
@@ -1301,12 +1301,15 @@ async function loadAdminPurchases() {
           <th style="padding:6px 10px">Amount</th>
           <th style="padding:6px 10px">Discount code</th>
         </tr></thead>
-        <tbody>${purchases.map(p => `
+        <tbody>${allPurchases.map(p => `
           <tr style="border-top:1px solid var(--border)">
             <td style="padding:8px 10px;color:var(--muted)">${p.purchasedAt ? new Date(p.purchasedAt).toLocaleDateString('fi') : '—'}</td>
             <td style="padding:8px 10px"><div style="font-weight:600">${p.userName || '—'}</div><div style="font-size:.75rem;color:var(--muted)">${p.userEmail}</div></td>
             <td style="padding:8px 10px;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${p.tipTitle}</td>
-            <td style="padding:8px 10px;font-weight:600;color:${p.amount > 0 ? 'var(--green)' : 'var(--muted)'}">${p.amount > 0 ? p.amount.toFixed(2)+'€' : 'Free'}</td>
+            <td style="padding:8px 10px;font-weight:600">${p.paidWithBalance
+              ? `<span style="color:var(--accent)">Balance</span>`
+              : p.amount > 0 ? `<span style="color:var(--green)">${p.amount.toFixed(2)}€</span>` : '<span style="color:var(--muted)">Free</span>'
+            }</td>
             <td style="padding:8px 10px;color:var(--accent)">${p.discountCode || '—'}</td>
           </tr>`).join('')}
         </tbody>

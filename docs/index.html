@@ -127,6 +127,62 @@
   .sidebar.collapsed .tg-btn span,
   .sidebar.collapsed .tg-btn { justify-content: center; }
   .sidebar.collapsed .tg-btn svg { margin: 0; }
+  .balance-box {
+    background: var(--bg3); border: 1px solid var(--border); border-radius: 10px;
+    padding: 10px 13px; display: none; flex-direction: column; gap: 2px;
+  }
+  .balance-box .bal-label { font-size: .7rem; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; }
+  .balance-box .bal-amount { font-size: 1.15rem; font-weight: 700; color: var(--accent); }
+  .balance-box .topup-btn {
+    margin-top: 7px; width: 100%; padding: 6px; border-radius: 7px; font-size: .79rem;
+    cursor: pointer; background: var(--accent); color: #0f172a; border: none; font-weight: 600;
+    transition: opacity .15s;
+  }
+  .balance-box .topup-btn:hover { opacity: .85; }
+  .modal-overlay {
+    display: none; position: fixed; inset: 0; background: #00000099;
+    z-index: 1000; align-items: center; justify-content: center;
+  }
+  .modal-overlay.show { display: flex; }
+  .modal-box {
+    background: var(--bg2); border: 1px solid var(--border); border-radius: 14px;
+    padding: 28px 28px 24px; max-width: 380px; width: 90%; position: relative;
+  }
+  .modal-box h3 { font-size: 1.1rem; font-weight: 700; margin-bottom: 6px; }
+  .modal-close {
+    position: absolute; top: 14px; right: 16px; background: none; border: none;
+    color: var(--muted); font-size: 1.3rem; cursor: pointer; line-height: 1;
+  }
+  .topup-amounts { display: flex; gap: 8px; flex-wrap: wrap; margin: 16px 0 10px; }
+  .topup-amounts button {
+    flex: 1; min-width: 64px; padding: 9px 6px; border-radius: 8px; font-size: .88rem; font-weight: 600;
+    border: 1px solid var(--border); background: var(--bg3); color: var(--text); cursor: pointer;
+    transition: all .15s;
+  }
+  .topup-amounts button:hover, .topup-amounts button.sel { border-color: var(--accent); color: var(--accent); background: var(--bg2); }
+  .topup-custom { display: flex; gap: 8px; align-items: center; margin-bottom: 14px; }
+  .topup-custom input {
+    flex: 1; background: var(--bg3); border: 1px solid var(--border); border-radius: 8px;
+    color: var(--text); padding: 8px 12px; font-size: .9rem; outline: none;
+  }
+  .topup-custom input:focus { border-color: var(--accent); }
+  .bonus-badge {
+    background: #34d39922; border: 1px solid #34d39966; border-radius: 8px;
+    padding: 8px 12px; font-size: .82rem; color: var(--accent); margin-bottom: 14px; display: none;
+  }
+  .topup-confirm {
+    width: 100%; padding: 11px; border-radius: 9px; font-size: .95rem; font-weight: 700;
+    background: var(--accent); color: #0f172a; border: none; cursor: pointer; transition: opacity .15s;
+  }
+  .topup-confirm:hover { opacity: .85; }
+  .topup-confirm:disabled { opacity: .5; cursor: not-allowed; }
+  .bal-pay-btn {
+    width: 100%; padding: 8px 14px; border-radius: 8px; font-size: .82rem; font-weight: 600;
+    background: #34d39922; border: 1px solid #34d39966; color: var(--accent); cursor: pointer;
+    transition: all .15s; margin-top: 6px;
+  }
+  .bal-pay-btn:hover { background: #34d39933; }
+  .bal-pay-btn:disabled { opacity: .5; cursor: not-allowed; }
 
   /* ── Main ── */
   .main {
@@ -337,11 +393,37 @@
       <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.894 8.221-1.97 9.28c-.145.658-.537.818-1.084.508l-3-2.21-1.447 1.394c-.16.16-.295.295-.605.295l.213-3.053 5.56-5.023c.242-.213-.054-.333-.373-.12L8.32 14.617l-2.96-.924c-.643-.204-.657-.643.136-.953l11.57-4.461c.537-.194 1.006.131.828.942z"/></svg>
       Telegram
     </a>
+    <div class="balance-box" id="balanceBox">
+      <div class="bal-label">Your balance</div>
+      <div class="bal-amount" id="balanceAmount">0.00€</div>
+      <button class="topup-btn" onclick="openTopUpModal()">+ Top up</button>
+    </div>
     <div class="user-info" id="userLabel" style="display:none"></div>
     <button class="auth-btn"        id="loginBtn"  onclick="showView('login')"  style="display:none">Log in</button>
     <button class="auth-btn logout" id="logoutBtn" onclick="auth.signOut()"     style="display:none">Log out</button>
   </div>
 </aside>
+
+<!-- Top-up modal -->
+<div class="modal-overlay" id="topupModal" onclick="closeTopUpModal(event)">
+  <div class="modal-box">
+    <button class="modal-close" onclick="closeTopUpModal()">✕</button>
+    <h3>Top up balance</h3>
+    <div class="bonus-badge" id="bonusBadge"></div>
+    <div class="topup-amounts" id="topupAmountBtns">
+      <button onclick="selectTopUpAmount(5,this)">5€</button>
+      <button onclick="selectTopUpAmount(10,this)">10€</button>
+      <button onclick="selectTopUpAmount(20,this)">20€</button>
+      <button onclick="selectTopUpAmount(50,this)">50€</button>
+    </div>
+    <div class="topup-custom">
+      <input type="number" id="topupCustom" min="1" max="500" step="1" placeholder="Custom amount (€)" oninput="onTopUpInput(this)">
+    </div>
+    <div id="topupSummary" style="font-size:.82rem;color:var(--muted);margin-bottom:14px"></div>
+    <button class="topup-confirm" id="topupConfirmBtn" onclick="doTopUp()" disabled>Select an amount</button>
+    <div id="topupErr" style="color:var(--red);font-size:.8rem;margin-top:8px"></div>
+  </div>
+</div>
 
 <!-- Main -->
 <main class="main">
@@ -450,6 +532,37 @@
     <div class="section-title" style="margin-top:48px">Purchases & Revenue</div>
     <div id="adminPurchasesStats"></div>
     <div id="adminPurchasesList" style="margin-top:24px"><div class="empty" style="padding:20px">Loading...</div></div>
+
+    <!-- Deposit bonus -->
+    <div class="section-title" style="margin-top:48px">Top-up bonus</div>
+    <div class="admin-form" style="margin-bottom:28px">
+      <div class="row2">
+        <div class="field">
+          <label class="field-label">Bonus %</label>
+          <input type="number" id="bonus_pct" step="10" min="0" max="1000" placeholder="e.g. 100">
+        </div>
+        <div class="field" style="justify-content:flex-end;padding-top:22px">
+          <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:.85rem;color:var(--muted)">
+            <input type="checkbox" id="bonus_active"> Active
+          </label>
+        </div>
+      </div>
+      <div class="msg-ok"  id="bonusOk"></div>
+      <div class="msg-err" id="bonusErr"></div>
+      <button class="submit-btn" onclick="submitBonus()">Save bonus settings</button>
+    </div>
+
+    <!-- Add balance to user -->
+    <div class="section-title" style="margin-top:48px">Add balance to user</div>
+    <div class="admin-form" style="margin-bottom:28px">
+      <div class="row2">
+        <div class="field"><label class="field-label">User ID or email</label><input type="text" id="ab_user" placeholder="Paste user ID from Users list"></div>
+        <div class="field"><label class="field-label">Amount (€)</label><input type="number" id="ab_amount" step="0.5" min="0.5" placeholder="e.g. 10"></div>
+      </div>
+      <div class="msg-ok"  id="abOk"></div>
+      <div class="msg-err" id="abErr"></div>
+      <button class="submit-btn" onclick="submitAddBalance()">Add balance</button>
+    </div>
 
     <!-- Users -->
     <div class="section-title" style="margin-top:48px">Users</div>
@@ -578,8 +691,15 @@ function toggleSidebar() {
 // ── Auth ─────────────────────────────────────────────────────────────────────
 let currentUser = null;
 let userPurchases = new Set();
+let userBalance = 0;
 let tipsLoaded = false;
 let wasLoggedIn = false;
+let balanceUnsub = null;
+
+function updateBalanceDisplay(bal) {
+  userBalance = typeof bal === 'number' ? bal : 0;
+  document.getElementById('balanceAmount').textContent = userBalance.toFixed(2) + '€';
+}
 
 auth.onAuthStateChanged(async user => {
   currentUser = user;
@@ -589,25 +709,124 @@ auth.onAuthStateChanged(async user => {
     document.getElementById('userLabel').style.display = 'block';
     document.getElementById('logoutBtn').style.display = 'block';
     document.getElementById('loginBtn').style.display  = 'none';
+    document.getElementById('balanceBox').style.display = 'flex';
     if (user.uid === ADMIN_UID) document.getElementById('adminNav').style.display = 'flex';
     const snap = await db.collection('purchases').where('userId', '==', user.uid).get();
     snap.forEach(d => userPurchases.add(d.data().tipId));
+    // Real-time balance listener
+    if (balanceUnsub) balanceUnsub();
+    balanceUnsub = db.collection('users').doc(user.uid).onSnapshot(doc => {
+      updateBalanceDisplay(doc.data()?.balance || 0);
+    });
   } else {
     document.getElementById('userLabel').style.display = 'none';
     document.getElementById('logoutBtn').style.display = 'none';
     document.getElementById('loginBtn').style.display  = 'block';
     document.getElementById('adminNav').style.display  = 'none';
+    document.getElementById('balanceBox').style.display = 'none';
+    if (balanceUnsub) { balanceUnsub(); balanceUnsub = null; }
+    userBalance = 0;
     if (wasLoggedIn) showView('login');
     wasLoggedIn = false;
   }
 
-  // Handle ?success=1 after Stripe redirect
-  if (new URLSearchParams(location.search).get('success') === '1') {
+  const params = new URLSearchParams(location.search);
+  if (params.get('success') === '1') {
     history.replaceState({}, '', location.pathname);
     document.getElementById('successNotice').style.display = 'block';
     showView('tips');
   }
+  if (params.get('topup') === '1') {
+    history.replaceState({}, '', location.pathname);
+    alert('Balance top-up successful! Your balance has been updated.');
+  }
 });
+
+// ── Top-up modal ──────────────────────────────────────────────────────────────
+let selectedTopUpAmount = null;
+let topUpBonusCfg = { active: false, bonusPercent: 0 };
+
+async function openTopUpModal() {
+  selectedTopUpAmount = null;
+  document.getElementById('topupCustom').value = '';
+  document.getElementById('topupErr').textContent = '';
+  document.getElementById('topupConfirmBtn').textContent = 'Select an amount';
+  document.getElementById('topupConfirmBtn').disabled = true;
+  document.getElementById('topupSummary').textContent = '';
+  document.querySelectorAll('#topupAmountBtns button').forEach(b => b.classList.remove('sel'));
+  // Load bonus config
+  try {
+    const res = await functions.httpsCallable('getTopUpBonus')({});
+    topUpBonusCfg = res.data;
+  } catch(e) { topUpBonusCfg = { active: false, bonusPercent: 0 }; }
+  const badge = document.getElementById('bonusBadge');
+  if (topUpBonusCfg.active && topUpBonusCfg.bonusPercent > 0) {
+    badge.textContent = `Deposit bonus active: +${topUpBonusCfg.bonusPercent}% extra balance on every top-up!`;
+    badge.style.display = 'block';
+  } else {
+    badge.style.display = 'none';
+  }
+  // Update preset button labels
+  [5,10,20,50].forEach((amt, i) => {
+    const btn = document.querySelectorAll('#topupAmountBtns button')[i];
+    if (topUpBonusCfg.active) {
+      const credited = (amt * (1 + topUpBonusCfg.bonusPercent / 100)).toFixed(2);
+      btn.innerHTML = `${amt}€<br><small style="font-size:.72rem;color:var(--accent)">→ ${credited}€</small>`;
+    } else {
+      btn.textContent = `${amt}€`;
+    }
+  });
+  document.getElementById('topupModal').classList.add('show');
+}
+
+function closeTopUpModal(e) {
+  if (e && e.target !== document.getElementById('topupModal')) return;
+  document.getElementById('topupModal').classList.remove('show');
+}
+
+function selectTopUpAmount(amt, btn) {
+  selectedTopUpAmount = amt;
+  document.getElementById('topupCustom').value = '';
+  document.querySelectorAll('#topupAmountBtns button').forEach(b => b.classList.remove('sel'));
+  btn.classList.add('sel');
+  updateTopUpSummary(amt);
+}
+
+function onTopUpInput(input) {
+  selectedTopUpAmount = parseFloat(input.value) || null;
+  document.querySelectorAll('#topupAmountBtns button').forEach(b => b.classList.remove('sel'));
+  if (selectedTopUpAmount) updateTopUpSummary(selectedTopUpAmount);
+  else { document.getElementById('topupSummary').textContent = ''; document.getElementById('topupConfirmBtn').disabled = true; document.getElementById('topupConfirmBtn').textContent = 'Select an amount'; }
+}
+
+function updateTopUpSummary(amt) {
+  const confirmBtn = document.getElementById('topupConfirmBtn');
+  const summaryEl = document.getElementById('topupSummary');
+  if (topUpBonusCfg.active && topUpBonusCfg.bonusPercent > 0) {
+    const credited = (amt * (1 + topUpBonusCfg.bonusPercent / 100)).toFixed(2);
+    summaryEl.textContent = `Pay ${amt}€ — ${credited}€ will be added to your balance`;
+    confirmBtn.textContent = `Pay ${amt}€ → get ${credited}€`;
+  } else {
+    summaryEl.textContent = '';
+    confirmBtn.textContent = `Pay ${amt}€`;
+  }
+  confirmBtn.disabled = false;
+}
+
+async function doTopUp() {
+  if (!selectedTopUpAmount || selectedTopUpAmount < 1) return;
+  const btn = document.getElementById('topupConfirmBtn');
+  btn.disabled = true; btn.textContent = 'Redirecting...';
+  document.getElementById('topupErr').textContent = '';
+  try {
+    const res = await functions.httpsCallable('createTopUpSession')({ amount: selectedTopUpAmount });
+    window.location.href = res.data.url;
+  } catch(e) {
+    document.getElementById('topupErr').textContent = e.message || 'Something went wrong.';
+    btn.disabled = false;
+    updateTopUpSummary(selectedTopUpAmount);
+  }
+}
 
 // ── Navigation ────────────────────────────────────────────────────────────────
 function showView(name) {
@@ -617,7 +836,7 @@ function showView(name) {
   const navEl = document.querySelector(`[data-view="${name}"]`);
   if (navEl) navEl.classList.add('active');
   if (name === 'tips' && !tipsLoaded) { tipsLoaded = true; loadTips(); }
-  if (name === 'admin') { loadDiscountCodes(); loadAdminTips(); loadAdminArchived(); loadAdminUsers(); loadAdminPurchases(); }
+  if (name === 'admin') { loadDiscountCodes(); loadAdminTips(); loadAdminArchived(); loadAdminUsers(); loadAdminPurchases(); loadBonusSettings(); }
   // Close sidebar on mobile after navigation
   if (isMobile()) {
     document.getElementById('sidebar').classList.remove('open');
@@ -780,9 +999,11 @@ function buildTipCard(tipId, tip, owned) {
   } else if (owned) {
     actionHtml = `<div class="bought-badge">✓ Purchased</div>`;
   } else if (currentUser) {
+    const hasBalance = userBalance >= tip.price && tip.price > 0;
     actionHtml = `
       <div style="display:flex;flex-direction:column;gap:7px;align-items:flex-end">
-        <button class="buy-btn" onclick="buyTip('${tipId}', '${tip.price}', this)">Buy ${tip.price}€</button>
+        <button class="buy-btn" id="buy-btn-${tipId}" onclick="buyTip('${tipId}', '${tip.price}', this)">Buy ${tip.price}€</button>
+        ${hasBalance ? `<button class="bal-pay-btn" id="bal-btn-${tipId}" onclick="buyWithBalance('${tipId}', '${tip.price}', this)">Pay with balance (${userBalance.toFixed(2)}€)</button>` : ''}
         <span style="font-size:.75rem;color:var(--muted);cursor:pointer;text-decoration:underline" onclick="toggleDiscountInput('${tipId}')">Discount code?</span>
         <div id="dc-wrap-${tipId}" style="display:none;flex-direction:column;gap:5px;align-items:flex-end">
           <input id="dc-input-${tipId}" type="text" placeholder="Code" style="background:var(--bg3);border:1px solid var(--border);border-radius:6px;color:var(--text);padding:6px 10px;font-size:.82rem;outline:none;width:120px;text-transform:uppercase">
@@ -833,6 +1054,28 @@ async function buyTip(tipId, basePrice, btn) {
     }
   } catch(e) {
     btn.disabled = false; btn.textContent = `Buy ${basePrice}€`;
+    const msgEl = document.getElementById(`dc-msg-${tipId}`);
+    if (msgEl) { msgEl.textContent = e.message || 'An error occurred.'; msgEl.style.color = 'var(--red)'; }
+    else alert(e.message || 'Something went wrong.');
+  }
+}
+
+async function buyWithBalance(tipId, basePrice, btn) {
+  if (!currentUser) { showView('login'); return; }
+  const codeInput = document.getElementById(`dc-input-${tipId}`);
+  const discountCode = codeInput ? codeInput.value.trim().toUpperCase() : '';
+  btn.disabled = true; btn.textContent = 'Please wait...';
+  const buyBtn = document.getElementById(`buy-btn-${tipId}`);
+  if (buyBtn) buyBtn.disabled = true;
+  try {
+    await functions.httpsCallable('buyTipWithBalance')({ tipId, discountCode: discountCode || null });
+    userPurchases.add(tipId);
+    tipsLoaded = false;
+    document.getElementById('successNotice').style.display = 'block';
+    showView('tips');
+  } catch(e) {
+    btn.disabled = false; btn.textContent = `Pay with balance (${userBalance.toFixed(2)}€)`;
+    if (buyBtn) buyBtn.disabled = false;
     const msgEl = document.getElementById(`dc-msg-${tipId}`);
     if (msgEl) { msgEl.textContent = e.message || 'An error occurred.'; msgEl.style.color = 'var(--red)'; }
     else alert(e.message || 'Something went wrong.');
@@ -1154,6 +1397,46 @@ async function toggleCode(code, active) {
     await functions.httpsCallable('toggleDiscountCode')({ code, active });
     loadDiscountCodes();
   } catch(e) { alert(e.message); }
+}
+
+async function loadBonusSettings() {
+  try {
+    const res = await functions.httpsCallable('getTopUpBonus')({});
+    document.getElementById('bonus_pct').value = res.data.bonusPercent || 0;
+    document.getElementById('bonus_active').checked = !!res.data.active;
+  } catch(e) {}
+}
+
+async function submitBonus() {
+  const pct = parseFloat(document.getElementById('bonus_pct').value);
+  const active = document.getElementById('bonus_active').checked;
+  const okEl = document.getElementById('bonusOk');
+  const errEl = document.getElementById('bonusErr');
+  okEl.style.display = errEl.style.display = 'none';
+  if (isNaN(pct) || pct < 0) { errEl.textContent = 'Enter a valid percentage.'; errEl.style.display='block'; return; }
+  const btn = event.target; btn.disabled = true; btn.textContent = 'Saving...';
+  try {
+    await functions.httpsCallable('setTopUpBonus')({ bonusPercent: pct, active });
+    okEl.textContent = 'Saved!'; okEl.style.display = 'block';
+  } catch(e) { errEl.textContent = e.message; errEl.style.display = 'block'; }
+  btn.disabled = false; btn.textContent = 'Save bonus settings';
+}
+
+async function submitAddBalance() {
+  const userId = document.getElementById('ab_user').value.trim();
+  const amount = parseFloat(document.getElementById('ab_amount').value);
+  const okEl = document.getElementById('abOk');
+  const errEl = document.getElementById('abErr');
+  okEl.style.display = errEl.style.display = 'none';
+  if (!userId || isNaN(amount) || amount <= 0) { errEl.textContent = 'Fill in user ID and amount.'; errEl.style.display='block'; return; }
+  const btn = event.target; btn.disabled = true; btn.textContent = 'Adding...';
+  try {
+    await functions.httpsCallable('adminAddBalance')({ userId, amount });
+    okEl.textContent = `Added ${amount}€ to user.`; okEl.style.display = 'block';
+    document.getElementById('ab_user').value = '';
+    document.getElementById('ab_amount').value = '';
+  } catch(e) { errEl.textContent = e.message; errEl.style.display = 'block'; }
+  btn.disabled = false; btn.textContent = 'Add balance';
 }
 
 // ── Login / Register view ──────────────────────────────────────────────────────

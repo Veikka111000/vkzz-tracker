@@ -115,16 +115,27 @@ exports.stripeWebhook = onRequest({ rawBody: true }, async (req, res) => {
 
   if (event.type === "checkout.session.completed") {
     const session = event.data.object;
-    const { tipId, userId, discountCode } = session.metadata;
-    await db.collection("purchases").add({
-      tipId,
-      userId,
-      amount: session.amount_total / 100,
-      currency: session.currency,
-      discountCode: discountCode || null,
-      stripeSessionId: session.id,
-      purchasedAt: admin.firestore.FieldValue.serverTimestamp(),
-    });
+    if (session.metadata.type === "topup") {
+      const { userId, amount } = session.metadata;
+      const paid = parseFloat(amount);
+      const bonusSnap = await db.collection("settings").doc("topup").get();
+      const bonusCfg = bonusSnap.exists ? bonusSnap.data() : { active: false, bonusPercent: 0 };
+      const credited = bonusCfg.active ? paid * (1 + bonusCfg.bonusPercent / 100) : paid;
+      await db.collection("users").doc(userId).update({
+        balance: admin.firestore.FieldValue.increment(parseFloat(credited.toFixed(2))),
+      });
+    } else {
+      const { tipId, userId, discountCode } = session.metadata;
+      await db.collection("purchases").add({
+        tipId,
+        userId,
+        amount: session.amount_total / 100,
+        currency: session.currency,
+        discountCode: discountCode || null,
+        stripeSessionId: session.id,
+        purchasedAt: admin.firestore.FieldValue.serverTimestamp(),
+      });
+    }
   }
 
   res.json({ received: true });
@@ -283,5 +294,116 @@ exports.restoreTip = onCall({ cors: true }, async (request) => {
 
   const { tipId } = request.data;
   await db.collection("tips").doc(tipId).update({ active: true, archived: false });
+  return { ok: true };
+});
+
+// ── Create Top-Up Session ─────────────────────────────────────────────────────
+
+exports.createTopUpSession = onCall({ cors: true }, async (request) => {
+  if (!request.auth) throw new HttpsError("unauthenticated", "Please log in.");
+  const { amount } = request.data;
+  const parsed = parseFloat(amount);
+  if (!parsed || isNaN(parsed) || parsed < 1 || parsed > 500)
+    throw new HttpsError("invalid-argument", "Amount must be between 1 and 500.");
+
+  const bonusSnap = await db.collection("settings").doc("topup").get();
+  const bonusCfg = bonusSnap.exists ? bonusSnap.data() : { active: false, bonusPercent: 0 };
+  const credited = bonusCfg.active ? parsed * (1 + bonusCfg.bonusPercent / 100) : parsed;
+
+  const stripe = require("stripe")(STRIPE_SECRET);
+  const productName = bonusCfg.active
+    ? `Balance top-up: ${parsed}€ → ${credited.toFixed(2)}€ credited (+${bonusCfg.bonusPercent}% bonus)`
+    : `Balance top-up: ${parsed}€`;
+
+  const session = await stripe.checkout.sessions.create({
+    payment_method_types: ["card"],
+    line_items: [{
+      price_data: {
+        currency: "eur",
+        product_data: { name: productName },
+        unit_amount: Math.round(parsed * 100),
+      },
+      quantity: 1,
+    }],
+    mode: "payment",
+    success_url: "https://vkzzbetting.com/?topup=1",
+    cancel_url:  "https://vkzzbetting.com/",
+    metadata: { type: "topup", userId: request.auth.uid, amount: String(parsed) },
+  });
+
+  return { url: session.url };
+});
+
+// ── Buy Tip With Balance ──────────────────────────────────────────────────────
+
+exports.buyTipWithBalance = onCall({ cors: true }, async (request) => {
+  if (!request.auth) throw new HttpsError("unauthenticated", "Please log in.");
+  const { tipId, discountCode } = request.data;
+  if (!tipId) throw new HttpsError("invalid-argument", "tipId missing.");
+
+  const tipDoc = await db.collection("tips").doc(tipId).get();
+  if (!tipDoc.exists) throw new HttpsError("not-found", "Tip not found.");
+  const tip = tipDoc.data();
+  if (!tip.active) throw new HttpsError("failed-precondition", "This tip is no longer available.");
+
+  const existing = await db.collection("purchases")
+    .where("userId", "==", request.auth.uid).where("tipId", "==", tipId).limit(1).get();
+  if (!existing.empty) throw new HttpsError("already-exists", "You already purchased this tip.");
+
+  const { finalPrice, codeDoc } = await applyDiscount(discountCode, tip.price);
+
+  await db.runTransaction(async (t) => {
+    const userRef = db.collection("users").doc(request.auth.uid);
+    const userDoc = await t.get(userRef);
+    const balance = userDoc.data()?.balance || 0;
+    if (balance < finalPrice)
+      throw new HttpsError("failed-precondition", `Insufficient balance. You have ${balance.toFixed(2)}€.`);
+    t.update(userRef, { balance: admin.firestore.FieldValue.increment(-parseFloat(finalPrice.toFixed(2))) });
+    t.set(db.collection("purchases").doc(), {
+      tipId,
+      userId: request.auth.uid,
+      amount: finalPrice,
+      currency: "eur",
+      discountCode: discountCode ? discountCode.toUpperCase() : null,
+      stripeSessionId: null,
+      paidWithBalance: true,
+      purchasedAt: admin.firestore.FieldValue.serverTimestamp(),
+    });
+  });
+
+  if (codeDoc) await codeDoc.update({ usedCount: admin.firestore.FieldValue.increment(1) });
+  return { ok: true };
+});
+
+// ── Admin: Add Balance to User ────────────────────────────────────────────────
+
+exports.adminAddBalance = onCall({ cors: true }, async (request) => {
+  if (!request.auth || request.auth.uid !== ADMIN_UID)
+    throw new HttpsError("permission-denied", "No permission.");
+  const { userId, amount } = request.data;
+  if (!userId || amount == null || isNaN(amount))
+    throw new HttpsError("invalid-argument", "userId and amount required.");
+  await db.collection("users").doc(userId).update({
+    balance: admin.firestore.FieldValue.increment(parseFloat(parseFloat(amount).toFixed(2))),
+  });
+  return { ok: true };
+});
+
+// ── Admin: Get/Set Top-Up Bonus ───────────────────────────────────────────────
+
+exports.getTopUpBonus = onCall({ cors: true }, async (request) => {
+  if (!request.auth || request.auth.uid !== ADMIN_UID)
+    throw new HttpsError("permission-denied", "No permission.");
+  const snap = await db.collection("settings").doc("topup").get();
+  return snap.exists ? snap.data() : { active: false, bonusPercent: 0 };
+});
+
+exports.setTopUpBonus = onCall({ cors: true }, async (request) => {
+  if (!request.auth || request.auth.uid !== ADMIN_UID)
+    throw new HttpsError("permission-denied", "No permission.");
+  const { active, bonusPercent } = request.data;
+  if (bonusPercent == null || isNaN(bonusPercent) || bonusPercent < 0 || bonusPercent > 1000)
+    throw new HttpsError("invalid-argument", "bonusPercent must be 0–1000.");
+  await db.collection("settings").doc("topup").set({ active: !!active, bonusPercent: parseFloat(bonusPercent) });
   return { ok: true };
 });

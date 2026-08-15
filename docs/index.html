@@ -192,6 +192,13 @@
     transition: margin-left .22s ease, max-width .22s ease;
   }
 
+  /* ── Admin tabs ── */
+  .admin-tabs { display:flex; gap:2px; margin-bottom:28px; border-bottom:1px solid var(--border); flex-wrap:wrap; }
+  .admin-tab { padding:9px 15px; font-size:.84rem; cursor:pointer; border-bottom:2px solid transparent; color:var(--muted); transition:all .15s; white-space:nowrap; }
+  .admin-tab:hover { color:var(--text); }
+  .admin-tab.active { color:var(--accent); border-bottom-color:var(--accent); font-weight:600; }
+  .admin-panel { display:none; }
+  .admin-panel.active { display:block; }
   /* ── Mobile hamburger (always visible) ── */
   .mobile-toggle {
     display: none;
@@ -467,110 +474,120 @@
 
   <!-- Admin -->
   <div class="view" id="view-admin">
-    <!-- Add tip -->
-    <div class="section-title">Add new tip</div>
-    <div class="admin-form" style="margin-bottom:48px">
-      <div class="field"><label class="field-label">Title *</label><input type="text" id="f_title" placeholder="e.g. Djokovic vs Alcaraz — Alcaraz to win"></div>
-      <div class="row2">
-        <div class="field">
-          <label class="field-label">Sport</label>
-          <select id="f_sport"><option>Tennis</option><option>Football</option><option>Basketball</option><option>Hockey</option><option>Darts</option><option>Other</option></select>
-        </div>
-        <div class="field"><label class="field-label">Date</label><input type="text" id="f_date" placeholder="14.8.2026"></div>
-      </div>
-      <div class="field"><label class="field-label">Match</label><input type="text" id="f_match" placeholder="e.g. Djokovic vs Alcaraz"></div>
-      <div class="row2">
-        <div class="field"><label class="field-label">Odds</label><input type="number" id="f_odds" step="0.01" placeholder="1.85"></div>
-        <div class="field"><label class="field-label">Stake (u)</label><input type="number" id="f_stake" step="0.5" placeholder="2"></div>
-      </div>
-      <div class="row2">
-        <div class="field" id="priceField"><label class="field-label">Price (€) *</label><input type="number" id="f_price" step="0.5" min="0" placeholder="5"></div>
-        <div class="field">
-          <label class="field-label">Category</label>
-          <select id="f_category" onchange="togglePriceField()">
-            <option value="premium">Premium</option>
-            <option value="free">Free</option>
-          </select>
-        </div>
-      </div>
-      <div class="field"><label class="field-label">Tip content (visible to buyers only) *</label><textarea id="f_content" placeholder="Write the tip here..."></textarea></div>
-      <div class="msg-ok" id="adminOk">Tip added!</div>
-      <div class="msg-err" id="adminErr"></div>
-      <button class="submit-btn" onclick="submitTip()">Add tip</button>
+    <div class="admin-tabs">
+      <div class="admin-tab active" data-tab="tips" onclick="showAdminTab('tips')">Tips</div>
+      <div class="admin-tab" data-tab="archive" onclick="showAdminTab('archive')">Archive &amp; Manage</div>
+      <div class="admin-tab" data-tab="purchases" onclick="showAdminTab('purchases')">Purchases</div>
+      <div class="admin-tab" data-tab="wallet" onclick="showAdminTab('wallet')">Wallet</div>
+      <div class="admin-tab" data-tab="users" onclick="showAdminTab('users')">Users</div>
     </div>
 
-    <!-- Discount codes -->
-    <div class="section-title">Discount codes</div>
-    <div class="admin-form" style="margin-bottom:28px">
-      <div class="row2">
-        <div class="field"><label class="field-label">Code *</label><input type="text" id="dc_code" placeholder="e.g. SUMMER25" style="text-transform:uppercase"></div>
-        <div class="field">
-          <label class="field-label">Type *</label>
-          <select id="dc_type">
-            <option value="percent">Percentage (%)</option>
-            <option value="fixed">Fixed (€)</option>
-          </select>
+    <!-- Tab: Tips -->
+    <div class="admin-panel active" id="ap-tips">
+      <div class="section-title">Add new tip</div>
+      <div class="admin-form" style="margin-bottom:48px">
+        <div class="field"><label class="field-label">Title *</label><input type="text" id="f_title" placeholder="e.g. Djokovic vs Alcaraz — Alcaraz to win"></div>
+        <div class="row2">
+          <div class="field">
+            <label class="field-label">Sport</label>
+            <select id="f_sport"><option>Tennis</option><option>Football</option><option>Basketball</option><option>Hockey</option><option>Darts</option><option>Other</option></select>
+          </div>
+          <div class="field"><label class="field-label">Date</label><input type="text" id="f_date" placeholder="14.8.2026"></div>
         </div>
+        <div class="field"><label class="field-label">Match</label><input type="text" id="f_match" placeholder="e.g. Djokovic vs Alcaraz"></div>
+        <div class="row2">
+          <div class="field"><label class="field-label">Odds</label><input type="number" id="f_odds" step="0.01" placeholder="1.85"></div>
+          <div class="field"><label class="field-label">Stake (u)</label><input type="number" id="f_stake" step="0.5" placeholder="2"></div>
+        </div>
+        <div class="row2">
+          <div class="field" id="priceField"><label class="field-label">Price (€) *</label><input type="number" id="f_price" step="0.5" min="0" placeholder="5"></div>
+          <div class="field">
+            <label class="field-label">Category</label>
+            <select id="f_category" onchange="togglePriceField()">
+              <option value="premium">Premium</option>
+              <option value="free">Free</option>
+            </select>
+          </div>
+        </div>
+        <div class="field"><label class="field-label">Tip content (visible to buyers only) *</label><textarea id="f_content" placeholder="Write the tip here..."></textarea></div>
+        <div class="msg-ok" id="adminOk">Tip added!</div>
+        <div class="msg-err" id="adminErr"></div>
+        <button class="submit-btn" onclick="submitTip()">Add tip</button>
       </div>
-      <div class="row2">
-        <div class="field"><label class="field-label">Value *</label><input type="number" id="dc_value" step="1" min="1" placeholder="e.g. 20"></div>
-        <div class="field"><label class="field-label">Max uses (blank = unlimited)</label><input type="number" id="dc_maxuses" step="1" min="1" placeholder="—"></div>
+      <div class="section-title">Discount codes</div>
+      <div class="admin-form" style="margin-bottom:28px">
+        <div class="row2">
+          <div class="field"><label class="field-label">Code *</label><input type="text" id="dc_code" placeholder="e.g. SUMMER25" style="text-transform:uppercase"></div>
+          <div class="field">
+            <label class="field-label">Type *</label>
+            <select id="dc_type">
+              <option value="percent">Percentage (%)</option>
+              <option value="fixed">Fixed (€)</option>
+            </select>
+          </div>
+        </div>
+        <div class="row2">
+          <div class="field"><label class="field-label">Value *</label><input type="number" id="dc_value" step="1" min="1" placeholder="e.g. 20"></div>
+          <div class="field"><label class="field-label">Max uses (blank = unlimited)</label><input type="number" id="dc_maxuses" step="1" min="1" placeholder="—"></div>
+        </div>
+        <div class="msg-ok" id="dcOk"></div>
+        <div class="msg-err" id="dcErr"></div>
+        <button class="submit-btn" onclick="submitDiscount()">Create discount code</button>
       </div>
-      <div class="msg-ok"  id="dcOk"></div>
-      <div class="msg-err" id="dcErr"></div>
-      <button class="submit-btn" onclick="submitDiscount()">Create discount code</button>
+      <div id="dcList"><div class="empty" style="padding:20px">Loading codes...</div></div>
     </div>
 
-    <!-- Code list -->
-    <div id="dcList"><div class="empty" style="padding:20px">Loading codes...</div></div>
-
-    <!-- Archived tips -->
-    <div class="section-title" style="margin-top:48px">Archived tips</div>
-    <div id="adminArchivedList"><div class="empty" style="padding:20px">Loading...</div></div>
-
-    <!-- Purchases & stats -->
-    <div class="section-title" style="margin-top:48px">Purchases & Revenue</div>
-    <div id="adminPurchasesStats"></div>
-    <div id="adminPurchasesList" style="margin-top:24px"><div class="empty" style="padding:20px">Loading...</div></div>
-
-    <!-- Deposit bonus -->
-    <div class="section-title" style="margin-top:48px">Top-up bonus</div>
-    <div class="admin-form" style="margin-bottom:28px">
-      <div class="row2">
-        <div class="field">
-          <label class="field-label">Bonus %</label>
-          <input type="number" id="bonus_pct" step="10" min="0" max="1000" placeholder="e.g. 100">
-        </div>
-        <div class="field" style="justify-content:flex-end;padding-top:22px">
-          <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:.85rem;color:var(--muted)">
-            <input type="checkbox" id="bonus_active"> Active
-          </label>
-        </div>
-      </div>
-      <div class="msg-ok"  id="bonusOk"></div>
-      <div class="msg-err" id="bonusErr"></div>
-      <button class="submit-btn" onclick="submitBonus()">Save bonus settings</button>
+    <!-- Tab: Archive & Manage -->
+    <div class="admin-panel" id="ap-archive">
+      <div class="section-title">Archived tips</div>
+      <div id="adminArchivedList"><div class="empty" style="padding:20px">Loading...</div></div>
+      <div class="section-title" style="margin-top:48px">Manage tips</div>
+      <div id="adminTipsList"><div class="empty" style="padding:20px">Loading tips...</div></div>
     </div>
 
-    <!-- Add balance to user -->
-    <div class="section-title" style="margin-top:48px">Add balance to user</div>
-    <div class="admin-form" style="margin-bottom:28px">
-      <div class="row2">
-        <div class="field"><label class="field-label">User ID or email</label><input type="text" id="ab_user" placeholder="Paste user ID from Users list"></div>
-        <div class="field"><label class="field-label">Amount (€)</label><input type="number" id="ab_amount" step="0.5" min="0.5" placeholder="e.g. 10"></div>
-      </div>
-      <div class="msg-ok"  id="abOk"></div>
-      <div class="msg-err" id="abErr"></div>
-      <button class="submit-btn" onclick="submitAddBalance()">Add balance</button>
+    <!-- Tab: Purchases -->
+    <div class="admin-panel" id="ap-purchases">
+      <div class="section-title">Purchases &amp; Revenue</div>
+      <div id="adminPurchasesStats"></div>
+      <div id="adminPurchasesList" style="margin-top:24px"><div class="empty" style="padding:20px">Loading...</div></div>
     </div>
 
-    <!-- Users -->
-    <div class="section-title" style="margin-top:48px">Users</div>
-    <div id="adminUsersList"><div class="empty" style="padding:20px">Loading users...</div></div>
+    <!-- Tab: Wallet -->
+    <div class="admin-panel" id="ap-wallet">
+      <div class="section-title">Top-up bonus</div>
+      <div class="admin-form" style="margin-bottom:36px">
+        <div class="row2">
+          <div class="field">
+            <label class="field-label">Bonus %</label>
+            <input type="number" id="bonus_pct" step="10" min="0" max="1000" placeholder="e.g. 100">
+          </div>
+          <div class="field" style="justify-content:flex-end;padding-top:22px">
+            <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:.85rem;color:var(--muted)">
+              <input type="checkbox" id="bonus_active"> Active
+            </label>
+          </div>
+        </div>
+        <div class="msg-ok" id="bonusOk"></div>
+        <div class="msg-err" id="bonusErr"></div>
+        <button class="submit-btn" onclick="submitBonus()">Save bonus settings</button>
+      </div>
+      <div class="section-title">Add balance to user</div>
+      <div class="admin-form">
+        <div class="row2">
+          <div class="field"><label class="field-label">User ID</label><input type="text" id="ab_user" placeholder="Paste UID from Users tab"></div>
+          <div class="field"><label class="field-label">Amount (€)</label><input type="number" id="ab_amount" step="0.5" min="0.5" placeholder="e.g. 10"></div>
+        </div>
+        <div class="msg-ok" id="abOk"></div>
+        <div class="msg-err" id="abErr"></div>
+        <button class="submit-btn" onclick="submitAddBalance()">Add balance</button>
+      </div>
+    </div>
 
-    <!-- Manage tips -->
-    <div class="section-title" style="margin-top:48px">Manage tips</div>
-    <div id="adminTipsList"><div class="empty" style="padding:20px">Loading tips...</div></div>
+    <!-- Tab: Users -->
+    <div class="admin-panel" id="ap-users">
+      <div class="section-title">Users</div>
+      <div id="adminUsersList"><div class="empty" style="padding:20px">Loading users...</div></div>
+    </div>
   </div>
 
   <!-- About -->
@@ -836,7 +853,7 @@ function showView(name) {
   const navEl = document.querySelector(`[data-view="${name}"]`);
   if (navEl) navEl.classList.add('active');
   if (name === 'tips' && !tipsLoaded) { tipsLoaded = true; loadTips(); }
-  if (name === 'admin') { loadDiscountCodes(); loadAdminTips(); loadAdminArchived(); loadAdminUsers(); loadAdminPurchases(); loadBonusSettings(); }
+  if (name === 'admin') { showAdminTab(activeAdminTab || 'tips'); }
   // Close sidebar on mobile after navigation
   if (isMobile()) {
     document.getElementById('sidebar').classList.remove('open');
@@ -1080,6 +1097,20 @@ async function buyWithBalance(tipId, basePrice, btn) {
     if (msgEl) { msgEl.textContent = e.message || 'An error occurred.'; msgEl.style.color = 'var(--red)'; }
     else alert(e.message || 'Something went wrong.');
   }
+}
+
+// ── Admin tabs ────────────────────────────────────────────────────────────────
+let activeAdminTab = 'tips';
+
+function showAdminTab(tab) {
+  activeAdminTab = tab;
+  document.querySelectorAll('.admin-tab').forEach(t => t.classList.toggle('active', t.dataset.tab === tab));
+  document.querySelectorAll('.admin-panel').forEach(p => p.classList.toggle('active', p.id === 'ap-' + tab));
+  if (tab === 'tips')      { loadDiscountCodes(); }
+  if (tab === 'archive')   { loadAdminArchived(); loadAdminTips(); }
+  if (tab === 'purchases') { loadAdminPurchases(); }
+  if (tab === 'wallet')    { loadBonusSettings(); }
+  if (tab === 'users')     { loadAdminUsers(); }
 }
 
 // ── Admin view ────────────────────────────────────────────────────────────────

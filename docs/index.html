@@ -1250,19 +1250,27 @@ async function loadAdminPurchases() {
       return;
     }
 
-    // ── Summary stats (cash only) ──
-    const totalRevenue  = cashPurchases.reduce((s, p) => s + p.amount, 0);
+    // ── Fetch top-ups first so we can include in revenue ──
+    let topups = [];
+    try {
+      const topupResult = await functions.httpsCallable('listTopUps')({});
+      topups = topupResult.data;
+    } catch(e) {}
+    const totalTopUps = topups.reduce((s, t) => s + t.paid, 0);
+
+    // ── Summary stats (cash purchases + top-ups = real money in) ──
+    const cashRevenue   = cashPurchases.reduce((s, p) => s + p.amount, 0);
+    const totalRevenue  = cashRevenue + totalTopUps;
     const paidPurchases = cashPurchases.filter(p => p.amount > 0);
     const freePurchases = cashPurchases.filter(p => p.amount === 0);
     const uniqueBuyers  = new Set(allPurchases.map(p => p.userId)).size;
-    const avgValue      = paidPurchases.length ? totalRevenue / paidPurchases.length : 0;
 
     statsEl.innerHTML = `
       <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px;margin-bottom:8px">
         <div class="card"><div class="label">Total revenue</div><div class="value neu">${totalRevenue.toFixed(2)}€</div></div>
         <div class="card"><div class="label">Purchases</div><div class="value neu">${allPurchases.length}</div><div class="sub">${freePurchases.length} free</div></div>
         <div class="card"><div class="label">Unique buyers</div><div class="value neu">${uniqueBuyers}</div></div>
-        <div class="card"><div class="label">Avg value</div><div class="value neu">${avgValue.toFixed(2)}€</div></div>
+        <div class="card"><div class="label">Top-ups</div><div class="value neu">${totalTopUps.toFixed(2)}€</div></div>
       </div>`;
 
     // ── Per-buyer breakdown (cash purchases + top-ups) ──
@@ -1273,15 +1281,11 @@ async function loadAdminPurchases() {
       byUser[p.userId].count++;
       if (p.discountCode) byUser[p.userId].codes.add(p.discountCode);
     });
-    // Add top-up amounts to per-buyer totals
-    try {
-      const topupResult = await functions.httpsCallable('listTopUps')({});
-      topupResult.data.forEach(t => {
-        if (!byUser[t.userId]) byUser[t.userId] = { name: t.userName || t.userEmail, email: t.userEmail, total: 0, topups: 0, count: 0, codes: new Set() };
-        byUser[t.userId].topups += t.paid;
-        byUser[t.userId].total  += t.paid;
-      });
-    } catch(e) {}
+    topups.forEach(t => {
+      if (!byUser[t.userId]) byUser[t.userId] = { name: t.userName || t.userEmail, email: t.userEmail, total: 0, topups: 0, count: 0, codes: new Set() };
+      byUser[t.userId].topups += t.paid;
+      byUser[t.userId].total  += t.paid;
+    });
     const byUserArr = Object.values(byUser).sort((a, b) => b.total - a.total);
 
     // ── Discount code usage ──

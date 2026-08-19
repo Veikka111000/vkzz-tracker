@@ -354,6 +354,15 @@
   }
   .field input:focus, .field textarea:focus, .field select:focus { border-color: var(--accent); }
   .field textarea { min-height: 110px; resize: vertical; }
+  .pf-btn { padding:5px 13px;border:1px solid var(--border);border-radius:20px;background:var(--bg2);color:var(--muted);font-size:.8rem;cursor:pointer;transition:all .15s; }
+  .pf-btn:hover { border-color:var(--accent);color:var(--accent); }
+  .pf-btn.active { background:var(--accent);border-color:var(--accent);color:#000;font-weight:600; }
+  .stat-grid { display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:10px;margin-bottom:24px; }
+  .stat-box { background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:12px 14px; }
+  .stat-box .sb-label { font-size:.72rem;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px; }
+  .stat-box .sb-val { font-size:1.15rem;font-weight:700; }
+  .match-row { display:grid;grid-template-columns:90px 1fr 1fr 50px 60px;gap:6px;padding:7px 0;border-top:1px solid var(--border);font-size:.8rem;align-items:center; }
+  .match-row.head { color:var(--muted);font-size:.72rem;font-weight:600;text-transform:uppercase; }
   .submit-btn {
     padding: 11px; background: var(--accent); color: #fff; border: none;
     border-radius: 8px; font-size: 0.95rem; font-weight: 600; cursor: pointer; transition: opacity .15s;
@@ -390,6 +399,9 @@
     </div>
     <div class="nav-item" data-view="tips" onclick="showView('tips')">
       <span class="nav-icon">💡</span> Tips
+    </div>
+    <div class="nav-item" data-view="players" onclick="showView('players')">
+      <span class="nav-icon">🎾</span> Players
     </div>
     <div class="nav-item" id="adminNav" style="display:none" data-view="admin" onclick="showView('admin')">
       <span class="nav-icon">⚙️</span> Admin
@@ -592,6 +604,43 @@
     <div class="admin-panel" id="ap-users">
       <div class="section-title">Users</div>
       <div id="adminUsersList"><div class="empty" style="padding:20px">Loading users...</div></div>
+    </div>
+  </div>
+
+  <!-- Players -->
+  <div class="view" id="view-players">
+    <div style="max-width:900px">
+      <div style="font-size:1.3rem;font-weight:700;letter-spacing:-.02em;margin-bottom:20px">Player Stats</div>
+
+      <!-- Search -->
+      <div style="position:relative;max-width:420px;margin-bottom:20px">
+        <input id="playerSearch" type="text" placeholder="Search player..." autocomplete="off"
+          oninput="onPlayerSearch()"
+          style="width:100%;padding:10px 14px;background:var(--bg2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:.95rem;box-sizing:border-box">
+        <div id="playerDropdown" style="display:none;position:absolute;top:100%;left:0;right:0;background:var(--bg2);border:1px solid var(--border);border-radius:8px;margin-top:4px;max-height:260px;overflow-y:auto;z-index:50"></div>
+      </div>
+
+      <!-- Filters -->
+      <div id="playerFilters" style="display:none;margin-bottom:20px">
+        <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px">
+          <span style="font-size:.8rem;color:var(--muted);align-self:center;margin-right:4px">Surface</span>
+          <button class="pf-btn active" data-surface="all"  onclick="setPlayerFilter('surface','all')">All</button>
+          <button class="pf-btn"        data-surface="Hard" onclick="setPlayerFilter('surface','Hard')">Hard</button>
+          <button class="pf-btn"        data-surface="Clay" onclick="setPlayerFilter('surface','Clay')">Clay</button>
+          <button class="pf-btn"        data-surface="Grass" onclick="setPlayerFilter('surface','Grass')">Grass</button>
+        </div>
+        <div style="display:flex;flex-wrap:wrap;gap:8px">
+          <span style="font-size:.8rem;color:var(--muted);align-self:center;margin-right:4px">Period</span>
+          <button class="pf-btn active" data-period="all"    onclick="setPlayerFilter('period','all')">All time</button>
+          <button class="pf-btn"        data-period="2026"   onclick="setPlayerFilter('period','2026')">2026</button>
+          <button class="pf-btn"        data-period="2025"   onclick="setPlayerFilter('period','2025')">2025</button>
+          <button class="pf-btn"        data-period="2024"   onclick="setPlayerFilter('period','2024')">2024</button>
+          <button class="pf-btn"        data-period="30d"    onclick="setPlayerFilter('period','30d')">Last 30d</button>
+          <button class="pf-btn"        data-period="90d"    onclick="setPlayerFilter('period','90d')">Last 90d</button>
+        </div>
+      </div>
+
+      <div id="playerContent"></div>
     </div>
   </div>
 
@@ -889,6 +938,7 @@ function showView(name) {
   if (navEl) navEl.classList.add('active');
   if (name === 'tips' && !tipsLoaded) { tipsLoaded = true; loadTips(); }
   if (name === 'admin') { showAdminTab(activeAdminTab || 'tips'); }
+  if (name === 'players') { ensurePlayerIndex(); }
   // Close sidebar on mobile after navigation
   if (isMobile()) {
     document.getElementById('sidebar').classList.remove('open');
@@ -1723,6 +1773,147 @@ async function submitTip() {
   } catch(e) { errEl.textContent = e.message || 'Error.'; errEl.style.display = 'block'; }
   finally { btn.disabled = false; btn.textContent = 'Add tip'; }
 }
+
+// ── Players ───────────────────────────────────────────────────────────────────
+let playerIndex = null, currentPlayer = null;
+let pSurface = 'all', pPeriod = 'all';
+
+async function ensurePlayerIndex() {
+  if (playerIndex) return;
+  const r = await fetch('player_index.json');
+  playerIndex = await r.json();
+}
+
+function onPlayerSearch() {
+  const q = document.getElementById('playerSearch').value.trim().toLowerCase();
+  const dd = document.getElementById('playerDropdown');
+  if (!q) { dd.style.display = 'none'; return; }
+  ensurePlayerIndex().then(() => {
+    const matches = playerIndex.filter(p => p.name.toLowerCase().includes(q)).slice(0, 10);
+    if (!matches.length) { dd.style.display = 'none'; return; }
+    dd.innerHTML = matches.map(p => `
+      <div onclick="selectPlayer('${p.id}','${p.name.replace(/'/g,"\\'")}',this)"
+        style="padding:9px 14px;cursor:pointer;border-bottom:1px solid var(--border)"
+        onmouseover="this.style.background='var(--bg3)'" onmouseout="this.style.background=''">
+        <span style="font-weight:600">${p.name}</span>
+        <span style="color:var(--muted);font-size:.78rem;margin-left:8px">Elo ${p.elo}</span>
+      </div>`).join('');
+    dd.style.display = 'block';
+  });
+}
+
+async function selectPlayer(id, name) {
+  document.getElementById('playerSearch').value = name;
+  document.getElementById('playerDropdown').style.display = 'none';
+  document.getElementById('playerContent').innerHTML = '<div style="color:var(--muted);padding:20px 0">Loading...</div>';
+  document.getElementById('playerFilters').style.display = 'block';
+  const r = await fetch(`players/${id}.json`);
+  currentPlayer = await r.json();
+  renderPlayer();
+}
+
+function setPlayerFilter(type, val) {
+  if (type === 'surface') {
+    pSurface = val;
+    document.querySelectorAll('[data-surface]').forEach(b => b.classList.toggle('active', b.dataset.surface === val));
+  } else {
+    pPeriod = val;
+    document.querySelectorAll('[data-period]').forEach(b => b.classList.toggle('active', b.dataset.period === val));
+  }
+  if (currentPlayer) renderPlayer();
+}
+
+function filterMatches(matches) {
+  const now = new Date();
+  return matches.filter(m => {
+    if (pSurface !== 'all' && m.surface !== pSurface) return false;
+    const y = m.date.slice(0, 4), mo = m.date.slice(4, 6), d = m.date.slice(6, 8);
+    const date = new Date(`${y}-${mo}-${d}`);
+    if (pPeriod === '2024' || pPeriod === '2025' || pPeriod === '2026') {
+      if (y !== pPeriod) return false;
+    } else if (pPeriod === '30d') {
+      if ((now - date) / 86400000 > 30) return false;
+    } else if (pPeriod === '90d') {
+      if ((now - date) / 86400000 > 90) return false;
+    }
+    return true;
+  });
+}
+
+function pct(a, b) { return b > 0 ? (a / b * 100).toFixed(1) + '%' : '—'; }
+function fmt(v, dec = 1) { return v != null ? v.toFixed(dec) : '—'; }
+
+function renderPlayer() {
+  const p = currentPlayer;
+  const matches = filterMatches(p.matches);
+  const el = document.getElementById('playerContent');
+
+  const surfaceElo = pSurface === 'Hard' ? p.elo_hard : pSurface === 'Clay' ? p.elo_clay : pSurface === 'Grass' ? p.elo_grass : p.elo;
+
+  const wins = matches.filter(m => m.result === 'W').length;
+  const losses = matches.filter(m => m.result === 'L').length;
+  const total = wins + losses;
+
+  let sp=0, fi=0, fw=0, sw=0, aces=0, bf=0, bs=0;
+  let osp=0, ofi=0, ofw=0, osw=0;
+  matches.forEach(m => {
+    sp += m.sp||0; fi += m.fi||0; fw += m.fw||0; sw += m.sw||0;
+    aces += m.aces||0; bf += m.bf||0; bs += m.bs||0;
+    osp += m.osp||0; ofi += m.ofi||0; ofw += m.ofw||0; osw += m.osw||0;
+  });
+
+  if (!total) {
+    el.innerHTML = '<div style="color:var(--muted);padding:20px 0">No matches for this filter.</div>';
+    return;
+  }
+
+  // Elo colour
+  const eloColor = surfaceElo >= 2000 ? 'var(--green)' : surfaceElo >= 1700 ? 'var(--accent)' : 'var(--muted)';
+
+  el.innerHTML = `
+    <div style="margin-bottom:20px">
+      <div style="font-size:1.4rem;font-weight:700">${p.name}</div>
+      <div style="color:var(--muted);font-size:.83rem;margin-top:2px">${p.hand === 'R' ? 'Right-handed' : p.hand === 'L' ? 'Left-handed' : ''} ${p.backhand === '2' ? '· Two-handed BH' : p.backhand === '1' ? '· One-handed BH' : ''} ${p.height ? '· ' + p.height + 'cm' : ''} ${p.age ? '· Age ' + p.age : ''}</div>
+    </div>
+    <div class="stat-grid">
+      <div class="stat-box"><div class="sb-label">Elo</div><div class="sb-val" style="color:${eloColor}">${surfaceElo}</div></div>
+      <div class="stat-box"><div class="sb-label">W / L</div><div class="sb-val">${wins} / ${losses}</div></div>
+      <div class="stat-box"><div class="sb-label">Win %</div><div class="sb-val">${pct(wins, total)}</div></div>
+      <div class="stat-box"><div class="sb-label">1st serve %</div><div class="sb-val">${pct(fi, sp)}</div></div>
+      <div class="stat-box"><div class="sb-label">1st serve W%</div><div class="sb-val">${pct(fw, fi)}</div></div>
+      <div class="stat-box"><div class="sb-label">2nd serve W%</div><div class="sb-val">${pct(sw, sp - fi)}</div></div>
+      <div class="stat-box"><div class="sb-label">Aces / match</div><div class="sb-val">${total ? fmt(aces / total) : '—'}</div></div>
+      <div class="stat-box"><div class="sb-label">BP saved %</div><div class="sb-val">${pct(bs, bf)}</div></div>
+      <div class="stat-box"><div class="sb-label">Opp 1st %</div><div class="sb-val">${pct(ofi, osp)}</div></div>
+      <div class="stat-box"><div class="sb-label">Opp 1st W%</div><div class="sb-val">${pct(ofw, ofi)}</div></div>
+      <div class="stat-box"><div class="sb-label">Opp 2nd W%</div><div class="sb-val">${pct(osw, osp - ofi)}</div></div>
+      <div class="stat-box"><div class="sb-label">Matches</div><div class="sb-val">${total}</div></div>
+    </div>
+
+    <div style="font-size:.82rem;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">Recent matches</div>
+    <div style="max-width:800px">
+      <div class="match-row head">
+        <div>Date</div><div>Tournament</div><div>Opponent</div><div>Srf</div><div>Result</div>
+      </div>
+      ${[...matches].reverse().slice(0, 30).map(m => {
+        const dateStr = m.date.slice(0,4)+'-'+m.date.slice(4,6)+'-'+m.date.slice(6,8);
+        const srfColor = m.surface === 'Hard' ? '#4a9eff' : m.surface === 'Clay' ? '#e07b54' : '#5cb85c';
+        return `<div class="match-row">
+          <div style="color:var(--muted)">${dateStr}</div>
+          <div style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${m.tournament} <span style="color:var(--muted);font-size:.75rem">${m.round}</span></div>
+          <div style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${m.opponent}</div>
+          <div style="color:${srfColor};font-size:.75rem;font-weight:600">${m.surface.slice(0,2).toUpperCase()}</div>
+          <div style="font-weight:700;color:${m.result==='W'?'var(--green)':'var(--red,#e05555)'}">${m.result} <span style="color:var(--muted);font-weight:400;font-size:.75rem">${m.score||''}</span></div>
+        </div>`;
+      }).join('')}
+    </div>`;
+}
+
+// Close dropdown on outside click
+document.addEventListener('click', e => {
+  if (!e.target.closest('#playerSearch') && !e.target.closest('#playerDropdown'))
+    document.getElementById('playerDropdown').style.display = 'none';
+});
 </script>
 </body>
 </html>

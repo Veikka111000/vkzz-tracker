@@ -359,8 +359,12 @@
   .pf-btn.active { background:var(--accent);border-color:var(--accent);color:#000;font-weight:600; }
   .stat-grid { display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:10px;margin-bottom:24px; }
   .stat-box { background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:12px 14px; }
-  .stat-box .sb-label { font-size:.72rem;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px; }
+  .stat-box .sb-label { font-size:.72rem;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px;display:flex;align-items:center;gap:4px; }
   .stat-box .sb-val { font-size:1.15rem;font-weight:700; }
+  .tip-wrap { position:relative;display:inline-flex;align-items:center; }
+  .tip-wrap .tip-icon { font-size:.7rem;color:var(--muted);cursor:default;line-height:1; }
+  .tip-wrap .tip-box { display:none;position:absolute;bottom:calc(100% + 6px);left:50%;transform:translateX(-50%);background:#1e2433;border:1px solid var(--border);border-radius:6px;padding:7px 10px;font-size:.75rem;color:var(--text);white-space:pre;z-index:99;pointer-events:none;font-weight:400;text-transform:none;letter-spacing:0;line-height:1.5; }
+  .tip-wrap:hover .tip-box { display:block; }
   .match-row { display:grid;grid-template-columns:90px 1fr 1fr 50px 60px;gap:6px;padding:7px 0;border-top:1px solid var(--border);font-size:.8rem;align-items:center; }
   .match-row.head { color:var(--muted);font-size:.72rem;font-weight:600;text-transform:uppercase; }
   .cmp-row { display:grid;grid-template-columns:1fr 160px 1fr;gap:4px;padding:8px 0;border-top:1px solid var(--border);font-size:.85rem;align-items:center;text-align:center; }
@@ -1875,18 +1879,29 @@ function pct(a, b) { return b > 0 ? (a / b * 100).toFixed(1) + '%' : '—'; }
 function pctNum(a, b) { return b > 0 ? a / b * 100 : null; }
 function fmt(v, dec = 1) { return v != null ? v.toFixed(dec) : '—'; }
 
+function tip(text) {
+  return `<span class="tip-wrap"><span class="tip-icon">ⓘ</span><span class="tip-box">${text.replace(/<br>/g,'\n')}</span></span>`;
+}
+
 function calcStats(p) {
   const matches = filterMatches(p.matches);
   const wins = matches.filter(m => m.result === 'W').length;
   const losses = matches.filter(m => m.result === 'L').length;
   const total = wins + losses;
-  let sp=0, fi=0, fw=0, sw=0, aces=0, bf=0, bs=0, osp=0, ofi=0, ofw=0, osw=0;
+  let sp=0, fi=0, fw=0, sw=0, aces=0, bf=0, bs=0, osp=0, ofi=0, ofw=0, osw=0, obf=0, obs=0;
   matches.forEach(m => {
     sp+=m.sp||0; fi+=m.fi||0; fw+=m.fw||0; sw+=m.sw||0;
     aces+=m.aces||0; bf+=m.bf||0; bs+=m.bs||0;
     osp+=m.osp||0; ofi+=m.ofi||0; ofw+=m.ofw||0; osw+=m.osw||0;
+    obf+=m.obf||0; obs+=m.obs||0;
   });
-  return { matches, wins, losses, total, sp, fi, fw, sw, aces, bf, bs, osp, ofi, ofw, osw };
+  const rpwNum = pctNum(osp - ofw - osw, osp);
+  const splNum = pctNum(sp - fw - sw, sp);
+  const drNum  = (rpwNum != null && splNum != null && splNum > 0) ? rpwNum / splNum : null;
+  const tpwNum = pctNum(fw + sw + (osp - ofw - osw), sp + osp);
+  const bpconvNum = pctNum(obf - obs, obf);
+  return { matches, wins, losses, total, sp, fi, fw, sw, aces, bf, bs, osp, ofi, ofw, osw, obf, obs,
+           rpwNum, splNum, drNum, tpwNum, bpconvNum };
 }
 
 function playerInfoLine(p) {
@@ -1934,11 +1949,15 @@ function renderSingle(el, p) {
     <div class="stat-grid">
       <div class="stat-box"><div class="sb-label">W / L</div><div class="sb-val">${s.wins} / ${s.losses}</div></div>
       <div class="stat-box"><div class="sb-label">Win %</div><div class="sb-val">${pct(s.wins, s.total)}</div></div>
+      <div class="stat-box"><div class="sb-label">TPW% ${tip('Total Points Won %: all points won<br>divided by total points played')}</div><div class="sb-val">${s.tpwNum != null ? s.tpwNum.toFixed(1)+'%' : '—'}</div></div>
+      <div class="stat-box"><div class="sb-label">RPW% ${tip('Return Points Won %: return points won<br>divided by opponent serve points played')}</div><div class="sb-val">${s.rpwNum != null ? s.rpwNum.toFixed(1)+'%' : '—'}</div></div>
+      <div class="stat-box"><div class="sb-label">DR ${tip('Dominance Ratio: % of return points won<br>divided by % of serve points lost')}</div><div class="sb-val">${s.drNum != null ? s.drNum.toFixed(2) : '—'}</div></div>
+      <div class="stat-box"><div class="sb-label">BP conv% ${tip('Break Point Conversion %: break points won<br>divided by break points created')}</div><div class="sb-val">${s.bpconvNum != null ? s.bpconvNum.toFixed(1)+'%' : '—'}</div></div>
+      <div class="stat-box"><div class="sb-label">BP saved %</div><div class="sb-val">${pct(s.bs, s.bf)}</div></div>
       <div class="stat-box"><div class="sb-label">1st serve %</div><div class="sb-val">${pct(s.fi, s.sp)}</div></div>
       <div class="stat-box"><div class="sb-label">1st serve W%</div><div class="sb-val">${pct(s.fw, s.fi)}</div></div>
       <div class="stat-box"><div class="sb-label">2nd serve W%</div><div class="sb-val">${pct(s.sw, s.sp - s.fi)}</div></div>
       <div class="stat-box"><div class="sb-label">Aces / match</div><div class="sb-val">${fmt(s.aces / s.total)}</div></div>
-      <div class="stat-box"><div class="sb-label">BP saved %</div><div class="sb-val">${pct(s.bs, s.bf)}</div></div>
       <div class="stat-box"><div class="sb-label">Opp 1st %</div><div class="sb-val">${pct(s.ofi, s.osp)}</div></div>
       <div class="stat-box"><div class="sb-label">Opp 1st W%</div><div class="sb-val">${pct(s.ofw, s.ofi)}</div></div>
       <div class="stat-box"><div class="sb-label">Opp 2nd W%</div><div class="sb-val">${pct(s.osw, s.osp - s.ofi)}</div></div>
@@ -1956,17 +1975,21 @@ function renderCompare(el) {
   const B = calcStats(currentPlayerB);
 
   const rows = [
-    { label: 'Matches',      a: A.total,                       b: B.total,                       fmt: v => v,          higher: true,  raw: true },
-    { label: 'W / L',        a: `${A.wins}/${A.losses}`,       b: `${B.wins}/${B.losses}`,       fmt: v => v,          higher: null },
-    { label: 'Win %',        a: pctNum(A.wins, A.total),       b: pctNum(B.wins, B.total),       fmt: v => v?.toFixed(1)+'%', higher: true },
-    { label: '1st serve %',  a: pctNum(A.fi, A.sp),            b: pctNum(B.fi, B.sp),            fmt: v => v?.toFixed(1)+'%', higher: true },
-    { label: '1st serve W%', a: pctNum(A.fw, A.fi),            b: pctNum(B.fw, B.fi),            fmt: v => v?.toFixed(1)+'%', higher: true },
-    { label: '2nd serve W%', a: pctNum(A.sw, A.sp-A.fi),       b: pctNum(B.sw, B.sp-B.fi),       fmt: v => v?.toFixed(1)+'%', higher: true },
-    { label: 'Aces / match', a: A.total ? A.aces/A.total : null, b: B.total ? B.aces/B.total : null, fmt: v => v?.toFixed(1), higher: true },
-    { label: 'BP saved %',   a: pctNum(A.bs, A.bf),            b: pctNum(B.bs, B.bf),            fmt: v => v?.toFixed(1)+'%', higher: true },
-    { label: 'Opp 1st %',   a: pctNum(A.ofi, A.osp),          b: pctNum(B.ofi, B.osp),          fmt: v => v?.toFixed(1)+'%', higher: false },
-    { label: 'Opp 1st W%',  a: pctNum(A.ofw, A.ofi),          b: pctNum(B.ofw, B.ofi),          fmt: v => v?.toFixed(1)+'%', higher: false },
-    { label: 'Opp 2nd W%',  a: pctNum(A.osw, A.osp-A.ofi),    b: pctNum(B.osw, B.osp-B.ofi),    fmt: v => v?.toFixed(1)+'%', higher: false },
+    { label: 'Matches',      a: A.total,        b: B.total,        fmt: v => v,                   higher: true,  raw: true },
+    { label: 'W / L',        a: `${A.wins}/${A.losses}`, b: `${B.wins}/${B.losses}`, fmt: v => v, higher: null },
+    { label: 'Win %',        a: pctNum(A.wins, A.total),           b: pctNum(B.wins, B.total),           fmt: v => v?.toFixed(1)+'%', higher: true },
+    { label: `TPW% ${tip('Total Points Won %')}`,      a: A.tpwNum,   b: B.tpwNum,   fmt: v => v?.toFixed(1)+'%', higher: true },
+    { label: `RPW% ${tip('Return Points Won %')}`,     a: A.rpwNum,   b: B.rpwNum,   fmt: v => v?.toFixed(1)+'%', higher: true },
+    { label: `DR ${tip('Dominance Ratio: RPW% / SPL%')}`, a: A.drNum, b: B.drNum,   fmt: v => v?.toFixed(2),     higher: true },
+    { label: `BP conv% ${tip('Break Point Conversion %')}`, a: A.bpconvNum, b: B.bpconvNum, fmt: v => v?.toFixed(1)+'%', higher: true },
+    { label: 'BP saved %',   a: pctNum(A.bs, A.bf),                b: pctNum(B.bs, B.bf),                fmt: v => v?.toFixed(1)+'%', higher: true },
+    { label: '1st serve %',  a: pctNum(A.fi, A.sp),                b: pctNum(B.fi, B.sp),                fmt: v => v?.toFixed(1)+'%', higher: true },
+    { label: '1st serve W%', a: pctNum(A.fw, A.fi),                b: pctNum(B.fw, B.fi),                fmt: v => v?.toFixed(1)+'%', higher: true },
+    { label: '2nd serve W%', a: pctNum(A.sw, A.sp-A.fi),           b: pctNum(B.sw, B.sp-B.fi),           fmt: v => v?.toFixed(1)+'%', higher: true },
+    { label: 'Aces / match', a: A.total ? A.aces/A.total : null,   b: B.total ? B.aces/B.total : null,   fmt: v => v?.toFixed(1),     higher: true },
+    { label: 'Opp 1st %',   a: pctNum(A.ofi, A.osp),              b: pctNum(B.ofi, B.osp),              fmt: v => v?.toFixed(1)+'%', higher: false },
+    { label: 'Opp 1st W%',  a: pctNum(A.ofw, A.ofi),              b: pctNum(B.ofw, B.ofi),              fmt: v => v?.toFixed(1)+'%', higher: false },
+    { label: 'Opp 2nd W%',  a: pctNum(A.osw, A.osp-A.ofi),        b: pctNum(B.osw, B.osp-B.ofi),        fmt: v => v?.toFixed(1)+'%', higher: false },
   ];
 
   const rowsHtml = rows.map(r => {

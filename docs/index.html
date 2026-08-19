@@ -1965,20 +1965,20 @@ function renderSingle(el, p) {
       <div style="color:var(--muted);font-size:.83rem;margin-top:2px">${playerInfoLine(p)}</div>
     </div>
     <div class="stat-grid">
-      <div class="stat-box"><div class="sb-label">W / L</div><div class="sb-val">${s.wins} / ${s.losses}</div></div>
-      <div class="stat-box"><div class="sb-label">Win %</div><div class="sb-val">${pct(s.wins, s.total)}</div></div>
-      <div class="stat-box"><div class="sb-label">TPW% ${tip('Total Points Won %: all points won<br>divided by total points played')}</div><div class="sb-val">${s.tpwNum != null ? s.tpwNum.toFixed(1)+'%' : '—'}</div></div>
-      <div class="stat-box"><div class="sb-label">RPW% ${tip('Return Points Won %: return points won<br>divided by opponent serve points played')}</div><div class="sb-val">${s.rpwNum != null ? s.rpwNum.toFixed(1)+'%' : '—'}</div></div>
-      <div class="stat-box"><div class="sb-label">DR ${tip('Dominance Ratio: % of return points won<br>divided by % of serve points lost')}</div><div class="sb-val">${s.drNum != null ? s.drNum.toFixed(2) : '—'}</div></div>
-      <div class="stat-box"><div class="sb-label">BP conv% ${tip('Break Point Conversion %: break points won<br>divided by break points created')}</div><div class="sb-val">${s.bpconvNum != null ? s.bpconvNum.toFixed(1)+'%' : '—'}</div></div>
-      <div class="stat-box"><div class="sb-label">BP saved %</div><div class="sb-val">${pct(s.bs, s.bf)}</div></div>
-      <div class="stat-box"><div class="sb-label">1st serve %</div><div class="sb-val">${pct(s.fi, s.sp)}</div></div>
-      <div class="stat-box"><div class="sb-label">1st serve W%</div><div class="sb-val">${pct(s.fw, s.fi)}</div></div>
-      <div class="stat-box"><div class="sb-label">2nd serve W%</div><div class="sb-val">${pct(s.sw, s.sp - s.fi)}</div></div>
-      <div class="stat-box"><div class="sb-label">Aces / match</div><div class="sb-val">${fmt(s.aces / s.total)}</div></div>
-      <div class="stat-box"><div class="sb-label">Return 1st W% ${tip('Return points won on opponent\'s\nfirst serve')}</div><div class="sb-val">${pct(s.ofi - s.ofw, s.ofi)}</div></div>
-      <div class="stat-box"><div class="sb-label">Return 2nd W% ${tip('Return points won on opponent\'s\nsecond serve')}</div><div class="sb-val">${pct(s.osp - s.ofi - s.osw, s.osp - s.ofi)}</div></div>
-      <div class="stat-box"><div class="sb-label">Matches</div><div class="sb-val">${s.total}</div></div>
+      <div class="stat-box"><div class="sb-label">W / L ${tip('Wins / Losses in filtered matches')}</div><div class="sb-val">${s.wins} / ${s.losses}</div></div>
+      <div class="stat-box"><div class="sb-label">Win % ${tip('Match win percentage')}</div><div class="sb-val">${pct(s.wins, s.total)}</div></div>
+      <div class="stat-box"><div class="sb-label">TPW% ${tip('Total Points Won %:\nall points won divided by\ntotal points played')}</div><div class="sb-val">${s.tpwNum != null ? s.tpwNum.toFixed(1)+'%' : '—'}</div></div>
+      <div class="stat-box"><div class="sb-label">RPW% ${tip('Return Points Won %:\nreturn points won divided by\nopponent\'s total serve points')}</div><div class="sb-val">${s.rpwNum != null ? s.rpwNum.toFixed(1)+'%' : '—'}</div></div>
+      <div class="stat-box"><div class="sb-label">DR ${tip('Dominance Ratio:\n% of return points won divided by\n% of serve points lost.\n>1.0 = dominant, <1.0 = struggling')}</div><div class="sb-val">${s.drNum != null ? s.drNum.toFixed(2) : '—'}</div></div>
+      <div class="stat-box"><div class="sb-label">BP conv% ${tip('Break Point Conversion %:\nbreak points won divided by\nbreak points created')}</div><div class="sb-val">${s.bpconvNum != null ? s.bpconvNum.toFixed(1)+'%' : '—'}</div></div>
+      <div class="stat-box"><div class="sb-label">BP saved % ${tip('Break Points Saved %:\nbreak points saved divided by\nbreak points faced on own serve')}</div><div class="sb-val">${pct(s.bs, s.bf)}</div></div>
+      <div class="stat-box"><div class="sb-label">1st serve % ${tip('First Serve %:\nfirst serves in divided by\ntotal serve points')}</div><div class="sb-val">${pct(s.fi, s.sp)}</div></div>
+      <div class="stat-box"><div class="sb-label">1st serve W% ${tip('First Serve Won %:\npoints won when first serve\nlands in')}</div><div class="sb-val">${pct(s.fw, s.fi)}</div></div>
+      <div class="stat-box"><div class="sb-label">2nd serve W% ${tip('Second Serve Won %:\npoints won on second serve')}</div><div class="sb-val">${pct(s.sw, s.sp - s.fi)}</div></div>
+      <div class="stat-box"><div class="sb-label">Aces / match ${tip('Average aces per match')}</div><div class="sb-val">${fmt(s.aces / s.total)}</div></div>
+      <div class="stat-box"><div class="sb-label">Return 1st W% ${tip('Return Points Won % on 1st serve:\npoints won when opponent\'s\nfirst serve lands in')}</div><div class="sb-val">${pct(s.ofi - s.ofw, s.ofi)}</div></div>
+      <div class="stat-box"><div class="sb-label">Return 2nd W% ${tip('Return Points Won % on 2nd serve:\npoints won on opponent\'s\nsecond serve')}</div><div class="sb-val">${pct(s.osp - s.ofi - s.osw, s.osp - s.ofi)}</div></div>
+      <div class="stat-box"><div class="sb-label">Matches ${tip('Total matches with charting data\nin filtered selection')}</div><div class="sb-val">${s.total}</div></div>
       <div class="stat-box"><div class="sb-label">Avg Opp Rank ${tip('Average opponent world ranking\nacross filtered matches')}</div><div class="sb-val">${s.avgOppRank != null ? '#'+s.avgOppRank : '—'}</div></div>
     </div>
     <div style="font-size:.82rem;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">Recent matches</div>
@@ -1993,21 +1993,21 @@ function renderCompare(el) {
   const B = calcStats(currentPlayerB);
 
   const rows = [
-    { label: 'Matches',      a: A.total,        b: B.total,        fmt: v => v,                   higher: true,  raw: true },
-    { label: 'W / L',        a: `${A.wins}/${A.losses}`, b: `${B.wins}/${B.losses}`, fmt: v => v, higher: null },
-    { label: 'Win %',        a: pctNum(A.wins, A.total),           b: pctNum(B.wins, B.total),           fmt: v => v?.toFixed(1)+'%', higher: true },
-    { label: `TPW% ${tip('Total Points Won %')}`,      a: A.tpwNum,   b: B.tpwNum,   fmt: v => v?.toFixed(1)+'%', higher: true },
-    { label: `RPW% ${tip('Return Points Won %')}`,     a: A.rpwNum,   b: B.rpwNum,   fmt: v => v?.toFixed(1)+'%', higher: true },
-    { label: `DR ${tip('Dominance Ratio: RPW% / SPL%')}`, a: A.drNum, b: B.drNum,   fmt: v => v?.toFixed(2),     higher: true },
+    { label: `Matches ${tip('Total matches with\ncharting data')}`,   a: A.total,        b: B.total,        fmt: v => v,                   higher: true,  raw: true },
+    { label: `W / L ${tip('Wins / Losses')}`,        a: `${A.wins}/${A.losses}`, b: `${B.wins}/${B.losses}`, fmt: v => v, higher: null },
+    { label: `Win % ${tip('Match win percentage')}`,  a: pctNum(A.wins, A.total), b: pctNum(B.wins, B.total), fmt: v => v?.toFixed(1)+'%', higher: true },
+    { label: `TPW% ${tip('Total Points Won %')}`,     a: A.tpwNum,   b: B.tpwNum,   fmt: v => v?.toFixed(1)+'%', higher: true },
+    { label: `RPW% ${tip('Return Points Won %')}`,    a: A.rpwNum,   b: B.rpwNum,   fmt: v => v?.toFixed(1)+'%', higher: true },
+    { label: `DR ${tip('Dominance Ratio:\nRPW% / Serve points lost%')}`, a: A.drNum, b: B.drNum, fmt: v => v?.toFixed(2), higher: true },
     { label: `BP conv% ${tip('Break Point Conversion %')}`, a: A.bpconvNum, b: B.bpconvNum, fmt: v => v?.toFixed(1)+'%', higher: true },
-    { label: 'BP saved %',   a: pctNum(A.bs, A.bf),                b: pctNum(B.bs, B.bf),                fmt: v => v?.toFixed(1)+'%', higher: true },
-    { label: '1st serve %',  a: pctNum(A.fi, A.sp),                b: pctNum(B.fi, B.sp),                fmt: v => v?.toFixed(1)+'%', higher: true },
-    { label: '1st serve W%', a: pctNum(A.fw, A.fi),                b: pctNum(B.fw, B.fi),                fmt: v => v?.toFixed(1)+'%', higher: true },
-    { label: '2nd serve W%', a: pctNum(A.sw, A.sp-A.fi),           b: pctNum(B.sw, B.sp-B.fi),           fmt: v => v?.toFixed(1)+'%', higher: true },
-    { label: 'Aces / match', a: A.total ? A.aces/A.total : null,   b: B.total ? B.aces/B.total : null,   fmt: v => v?.toFixed(1),     higher: true },
-    { label: `Avg Opp Rank ${tip('Average opponent ranking')}`, a: A.avgOppRank, b: B.avgOppRank, fmt: v => v ? '#'+v : '—', higher: false, raw: true },
-    { label: 'Return 1st W%', a: pctNum(A.ofi-A.ofw, A.ofi),       b: pctNum(B.ofi-B.ofw, B.ofi),       fmt: v => v?.toFixed(1)+'%', higher: true },
-    { label: 'Return 2nd W%', a: pctNum(A.osp-A.ofi-A.osw, A.osp-A.ofi), b: pctNum(B.osp-B.ofi-B.osw, B.osp-B.ofi), fmt: v => v?.toFixed(1)+'%', higher: true },
+    { label: `BP saved % ${tip('Break Points Saved %')}`, a: pctNum(A.bs, A.bf), b: pctNum(B.bs, B.bf), fmt: v => v?.toFixed(1)+'%', higher: true },
+    { label: `1st serve % ${tip('First Serve In %')}`, a: pctNum(A.fi, A.sp), b: pctNum(B.fi, B.sp), fmt: v => v?.toFixed(1)+'%', higher: true },
+    { label: `1st serve W% ${tip('Points won on first serve')}`, a: pctNum(A.fw, A.fi), b: pctNum(B.fw, B.fi), fmt: v => v?.toFixed(1)+'%', higher: true },
+    { label: `2nd serve W% ${tip('Points won on second serve')}`, a: pctNum(A.sw, A.sp-A.fi), b: pctNum(B.sw, B.sp-B.fi), fmt: v => v?.toFixed(1)+'%', higher: true },
+    { label: `Aces / match ${tip('Average aces per match')}`, a: A.total ? A.aces/A.total : null, b: B.total ? B.aces/B.total : null, fmt: v => v?.toFixed(1), higher: true },
+    { label: `Avg Opp Rank ${tip('Average opponent world ranking')}`, a: A.avgOppRank, b: B.avgOppRank, fmt: v => v ? '#'+v : '—', higher: false, raw: true },
+    { label: `Return 1st W% ${tip('Return % on opponent\'s first serve')}`, a: pctNum(A.ofi-A.ofw, A.ofi), b: pctNum(B.ofi-B.ofw, B.ofi), fmt: v => v?.toFixed(1)+'%', higher: true },
+    { label: `Return 2nd W% ${tip('Return % on opponent\'s second serve')}`, a: pctNum(A.osp-A.ofi-A.osw, A.osp-A.ofi), b: pctNum(B.osp-B.ofi-B.osw, B.osp-B.ofi), fmt: v => v?.toFixed(1)+'%', higher: true },
   ];
 
   const rowsHtml = rows.map(r => {

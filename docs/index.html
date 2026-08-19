@@ -410,7 +410,7 @@
     <div class="nav-item" data-view="tips" onclick="showView('tips')">
       <span class="nav-icon">💡</span> Tips
     </div>
-    <div class="nav-item" id="playersNav" style="display:none" data-view="players" onclick="showView('players')">
+    <div class="nav-item" id="playersNav" data-view="players" onclick="showView('players')">
       <span class="nav-icon">🎾</span> Players
     </div>
     <div class="nav-item" id="adminNav" style="display:none" data-view="admin" onclick="showView('admin')">
@@ -837,7 +837,6 @@ auth.onAuthStateChanged(async user => {
     document.getElementById('loginBtn').style.display  = 'none';
     document.getElementById('balanceBox').style.display = 'flex';
     if (user.uid === ADMIN_UID) document.getElementById('adminNav').style.display = 'flex';
-    document.getElementById('playersNav').style.display = 'flex';
     const snap = await db.collection('purchases').where('userId', '==', user.uid).get();
     snap.forEach(d => userPurchases.add(d.data().tipId));
     // Real-time balance listener
@@ -850,7 +849,6 @@ auth.onAuthStateChanged(async user => {
     document.getElementById('logoutBtn').style.display = 'none';
     document.getElementById('loginBtn').style.display  = 'block';
     document.getElementById('adminNav').style.display   = 'none';
-    document.getElementById('playersNav').style.display = 'none';
     document.getElementById('balanceBox').style.display = 'none';
     if (balanceUnsub) { balanceUnsub(); balanceUnsub = null; }
     userBalance = 0;
@@ -965,7 +963,27 @@ function showView(name) {
   if (navEl) navEl.classList.add('active');
   if (name === 'tips' && !tipsLoaded) { tipsLoaded = true; loadTips(); }
   if (name === 'admin') { showAdminTab(activeAdminTab || 'tips'); }
-  if (name === 'players') { if (!currentUser) { showView('login'); return; } ensurePlayerIndex(); }
+  if (name === 'players') {
+    if (!currentUser) {
+      document.getElementById('playerContent').innerHTML = '';
+      document.getElementById('playerFilters').style.display = 'none';
+      document.getElementById('compareToggleBtn').style.display = 'none';
+      document.getElementById('compareSearchWrap').style.display = 'none';
+      document.getElementById('playerSearch').value = '';
+      document.getElementById('playerSearch').disabled = true;
+      document.getElementById('playerSearch').placeholder = 'Log in to search players...';
+      document.getElementById('playerContent').innerHTML =
+        `<div style="margin-top:8px;padding:18px 20px;background:var(--bg2);border:1px solid var(--border);border-radius:10px;max-width:380px;font-size:.9rem;color:var(--muted)">
+          <span style="color:var(--text);font-weight:600">Log in to use Player Stats</span><br><br>
+          Search and filter 380+ players, compare head-to-head, and view full career stats.<br><br>
+          <button class="submit-btn" style="padding:8px 20px;font-size:.85rem" onclick="showView('login')">Log in</button>
+        </div>`;
+    } else {
+      document.getElementById('playerSearch').disabled = false;
+      document.getElementById('playerSearch').placeholder = 'Search player...';
+      ensurePlayerIndex();
+    }
+  }
   // Close sidebar on mobile after navigation
   if (isMobile()) {
     document.getElementById('sidebar').classList.remove('open');

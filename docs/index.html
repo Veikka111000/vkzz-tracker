@@ -648,14 +648,21 @@
           <button class="pf-btn"        data-surface="Clay" onclick="setPlayerFilter('surface','Clay')">Clay</button>
           <button class="pf-btn"        data-surface="Grass" onclick="setPlayerFilter('surface','Grass')">Grass</button>
         </div>
-        <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px">
-          <span style="font-size:.8rem;color:var(--muted);align-self:center;margin-right:4px">Period</span>
-          <button class="pf-btn active" data-period="all"    onclick="setPlayerFilter('period','all')">All time</button>
-          <button class="pf-btn"        data-period="2026"   onclick="setPlayerFilter('period','2026')">2026</button>
-          <button class="pf-btn"        data-period="2025"   onclick="setPlayerFilter('period','2025')">2025</button>
-          <button class="pf-btn"        data-period="2024"   onclick="setPlayerFilter('period','2024')">2024</button>
-          <button class="pf-btn"        data-period="30d"    onclick="setPlayerFilter('period','30d')">Last 30d</button>
-          <button class="pf-btn"        data-period="90d"    onclick="setPlayerFilter('period','90d')">Last 90d</button>
+        <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px;align-items:center">
+          <span style="font-size:.8rem;color:var(--muted);margin-right:4px">Period</span>
+          <button class="pf-btn active" data-period="all"  onclick="setPlayerFilter('period','all')">All time</button>
+          <button class="pf-btn"        data-period="2026" onclick="setPlayerFilter('period','2026')">2026</button>
+          <button class="pf-btn"        data-period="2025" onclick="setPlayerFilter('period','2025')">2025</button>
+          <button class="pf-btn"        data-period="2024" onclick="setPlayerFilter('period','2024')">2024</button>
+          <button class="pf-btn"        data-period="6mo"  onclick="setPlayerFilter('period','6mo')">Last 6mo</button>
+          <button class="pf-btn"        data-period="90d"  onclick="setPlayerFilter('period','90d')">Last 90d</button>
+          <button class="pf-btn"        data-period="30d"  onclick="setPlayerFilter('period','30d')">Last 30d</button>
+          <span style="font-size:.8rem;color:var(--muted);margin-left:4px">Custom</span>
+          <input type="date" id="pDateFrom" onchange="setCustomDateRange()"
+            style="padding:4px 8px;background:var(--bg2);border:1px solid var(--border);border-radius:20px;color:var(--text);font-size:.78rem;cursor:pointer">
+          <span style="font-size:.8rem;color:var(--muted)">–</span>
+          <input type="date" id="pDateTo" onchange="setCustomDateRange()"
+            style="padding:4px 8px;background:var(--bg2);border:1px solid var(--border);border-radius:20px;color:var(--text);font-size:.78rem;cursor:pointer">
         </div>
         <div style="display:flex;flex-wrap:wrap;gap:8px">
           <span style="font-size:.8rem;color:var(--muted);align-self:center;margin-right:4px">Level</span>
@@ -1822,6 +1829,7 @@ async function submitTip() {
 // ── Players ───────────────────────────────────────────────────────────────────
 let playerIndex = null, currentPlayer = null, currentPlayerB = null;
 let pSurface = 'all', pPeriod = 'all', pLevel = 'all', compareMode = false;
+let pCustomFrom = null, pCustomTo = null;
 
 async function ensurePlayerIndex() {
   if (playerIndex) return;
@@ -1883,10 +1891,23 @@ function setPlayerFilter(type, val) {
     document.querySelectorAll('[data-surface]').forEach(b => b.classList.toggle('active', b.dataset.surface === val));
   } else if (type === 'period') {
     pPeriod = val;
+    pCustomFrom = pCustomTo = null;
+    document.getElementById('pDateFrom').value = '';
+    document.getElementById('pDateTo').value = '';
     document.querySelectorAll('[data-period]').forEach(b => b.classList.toggle('active', b.dataset.period === val));
   } else {
     pLevel = val;
     document.querySelectorAll('[data-level]').forEach(b => b.classList.toggle('active', b.dataset.level === val));
+  }
+  if (currentPlayer) renderPlayer();
+}
+
+function setCustomDateRange() {
+  pCustomFrom = document.getElementById('pDateFrom').value || null;
+  pCustomTo   = document.getElementById('pDateTo').value   || null;
+  if (pCustomFrom || pCustomTo) {
+    pPeriod = 'custom';
+    document.querySelectorAll('[data-period]').forEach(b => b.classList.remove('active'));
   }
   if (currentPlayer) renderPlayer();
 }
@@ -1904,9 +1925,18 @@ function filterMatches(matches) {
     if (pLevel === 'atp' && isChallenger(m.tournament)) return false;
     const y = m.date.slice(0, 4), mo = m.date.slice(4, 6), d = m.date.slice(6, 8);
     const date = new Date(`${y}-${mo}-${d}`);
-    if (pPeriod === '2024' || pPeriod === '2025' || pPeriod === '2026') { if (y !== pPeriod) return false; }
-    else if (pPeriod === '30d') { if ((now - date) / 86400000 > 30) return false; }
-    else if (pPeriod === '90d') { if ((now - date) / 86400000 > 90) return false; }
+    if (pPeriod === 'custom') {
+      if (pCustomFrom && m.date.slice(0,4)+'-'+m.date.slice(4,6)+'-'+m.date.slice(6,8) < pCustomFrom) return false;
+      if (pCustomTo   && m.date.slice(0,4)+'-'+m.date.slice(4,6)+'-'+m.date.slice(6,8) > pCustomTo)   return false;
+    } else if (pPeriod === '2024' || pPeriod === '2025' || pPeriod === '2026') {
+      if (y !== pPeriod) return false;
+    } else if (pPeriod === '30d') {
+      if ((now - date) / 86400000 > 30) return false;
+    } else if (pPeriod === '90d') {
+      if ((now - date) / 86400000 > 90) return false;
+    } else if (pPeriod === '6mo') {
+      if ((now - date) / 86400000 > 183) return false;
+    }
     return true;
   });
 }

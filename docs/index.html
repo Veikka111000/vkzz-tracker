@@ -1958,9 +1958,8 @@ function renderSingle(el, p) {
       <div class="stat-box"><div class="sb-label">1st serve W%</div><div class="sb-val">${pct(s.fw, s.fi)}</div></div>
       <div class="stat-box"><div class="sb-label">2nd serve W%</div><div class="sb-val">${pct(s.sw, s.sp - s.fi)}</div></div>
       <div class="stat-box"><div class="sb-label">Aces / match</div><div class="sb-val">${fmt(s.aces / s.total)}</div></div>
-      <div class="stat-box"><div class="sb-label">Opp 1st %</div><div class="sb-val">${pct(s.ofi, s.osp)}</div></div>
-      <div class="stat-box"><div class="sb-label">Opp 1st W%</div><div class="sb-val">${pct(s.ofw, s.ofi)}</div></div>
-      <div class="stat-box"><div class="sb-label">Opp 2nd W%</div><div class="sb-val">${pct(s.osw, s.osp - s.ofi)}</div></div>
+      <div class="stat-box"><div class="sb-label">Return 1st W% ${tip('Return points won on opponent\'s\nfirst serve')}</div><div class="sb-val">${pct(s.ofi - s.ofw, s.ofi)}</div></div>
+      <div class="stat-box"><div class="sb-label">Return 2nd W% ${tip('Return points won on opponent\'s\nsecond serve')}</div><div class="sb-val">${pct(s.osp - s.ofi - s.osw, s.osp - s.ofi)}</div></div>
       <div class="stat-box"><div class="sb-label">Matches</div><div class="sb-val">${s.total}</div></div>
     </div>
     <div style="font-size:.82rem;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">Recent matches</div>
@@ -1987,9 +1986,8 @@ function renderCompare(el) {
     { label: '1st serve W%', a: pctNum(A.fw, A.fi),                b: pctNum(B.fw, B.fi),                fmt: v => v?.toFixed(1)+'%', higher: true },
     { label: '2nd serve W%', a: pctNum(A.sw, A.sp-A.fi),           b: pctNum(B.sw, B.sp-B.fi),           fmt: v => v?.toFixed(1)+'%', higher: true },
     { label: 'Aces / match', a: A.total ? A.aces/A.total : null,   b: B.total ? B.aces/B.total : null,   fmt: v => v?.toFixed(1),     higher: true },
-    { label: 'Opp 1st %',   a: pctNum(A.ofi, A.osp),              b: pctNum(B.ofi, B.osp),              fmt: v => v?.toFixed(1)+'%', higher: false },
-    { label: 'Opp 1st W%',  a: pctNum(A.ofw, A.ofi),              b: pctNum(B.ofw, B.ofi),              fmt: v => v?.toFixed(1)+'%', higher: false },
-    { label: 'Opp 2nd W%',  a: pctNum(A.osw, A.osp-A.ofi),        b: pctNum(B.osw, B.osp-B.ofi),        fmt: v => v?.toFixed(1)+'%', higher: false },
+    { label: 'Return 1st W%', a: pctNum(A.ofi-A.ofw, A.ofi),       b: pctNum(B.ofi-B.ofw, B.ofi),       fmt: v => v?.toFixed(1)+'%', higher: true },
+    { label: 'Return 2nd W%', a: pctNum(A.osp-A.ofi-A.osw, A.osp-A.ofi), b: pctNum(B.osp-B.ofi-B.osw, B.osp-B.ofi), fmt: v => v?.toFixed(1)+'%', higher: true },
   ];
 
   const rowsHtml = rows.map(r => {

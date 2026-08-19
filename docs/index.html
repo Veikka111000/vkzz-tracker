@@ -658,11 +658,11 @@
           <button class="pf-btn"        data-period="90d"  onclick="setPlayerFilter('period','90d')">Last 90d</button>
           <button class="pf-btn"        data-period="30d"  onclick="setPlayerFilter('period','30d')">Last 30d</button>
           <span style="font-size:.8rem;color:var(--muted);margin-left:4px">Custom</span>
-          <input type="date" id="pDateFrom" onchange="setCustomDateRange()"
-            style="padding:4px 8px;background:var(--bg2);border:1px solid var(--border);border-radius:20px;color:var(--text);font-size:.78rem;cursor:pointer">
+          <input type="text" id="pDateFrom" placeholder="YYYY-MM-DD" maxlength="10" oninput="setCustomDateRange()"
+            style="padding:4px 10px;background:var(--bg2);border:1px solid var(--border);border-radius:20px;color:var(--text);font-size:.78rem;width:100px;text-align:center">
           <span style="font-size:.8rem;color:var(--muted)">–</span>
-          <input type="date" id="pDateTo" onchange="setCustomDateRange()"
-            style="padding:4px 8px;background:var(--bg2);border:1px solid var(--border);border-radius:20px;color:var(--text);font-size:.78rem;cursor:pointer">
+          <input type="text" id="pDateTo" placeholder="YYYY-MM-DD" maxlength="10" oninput="setCustomDateRange()"
+            style="padding:4px 10px;background:var(--bg2);border:1px solid var(--border);border-radius:20px;color:var(--text);font-size:.78rem;width:100px;text-align:center">
         </div>
         <div style="display:flex;flex-wrap:wrap;gap:8px">
           <span style="font-size:.8rem;color:var(--muted);align-self:center;margin-right:4px">Level</span>
@@ -1894,6 +1894,8 @@ function setPlayerFilter(type, val) {
     pCustomFrom = pCustomTo = null;
     document.getElementById('pDateFrom').value = '';
     document.getElementById('pDateTo').value = '';
+    document.getElementById('pDateFrom').style.borderColor = '';
+    document.getElementById('pDateTo').style.borderColor = '';
     document.querySelectorAll('[data-period]').forEach(b => b.classList.toggle('active', b.dataset.period === val));
   } else {
     pLevel = val;
@@ -1903,8 +1905,13 @@ function setPlayerFilter(type, val) {
 }
 
 function setCustomDateRange() {
-  pCustomFrom = document.getElementById('pDateFrom').value || null;
-  pCustomTo   = document.getElementById('pDateTo').value   || null;
+  const dateRe = /^\d{4}-\d{2}-\d{2}$/;
+  const fromRaw = document.getElementById('pDateFrom').value.trim();
+  const toRaw   = document.getElementById('pDateTo').value.trim();
+  pCustomFrom = (fromRaw && dateRe.test(fromRaw)) ? fromRaw : null;
+  pCustomTo   = (toRaw   && dateRe.test(toRaw))   ? toRaw   : null;
+  document.getElementById('pDateFrom').style.borderColor = (fromRaw && !pCustomFrom) ? '#e05555' : '';
+  document.getElementById('pDateTo').style.borderColor   = (toRaw   && !pCustomTo)   ? '#e05555' : '';
   if (pCustomFrom || pCustomTo) {
     pPeriod = 'custom';
     document.querySelectorAll('[data-period]').forEach(b => b.classList.remove('active'));

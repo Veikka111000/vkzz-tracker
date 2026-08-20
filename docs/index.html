@@ -664,11 +664,19 @@
           <input type="text" id="pDateTo" placeholder="YYYY-MM-DD" maxlength="10" oninput="setCustomDateRange()"
             style="padding:4px 10px;background:var(--bg2);border:1px solid var(--border);border-radius:20px;color:var(--text);font-size:.78rem;width:100px;text-align:center">
         </div>
-        <div style="display:flex;flex-wrap:wrap;gap:8px">
+        <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px">
           <span style="font-size:.8rem;color:var(--muted);align-self:center;margin-right:4px">Level</span>
           <button class="pf-btn active" data-level="all"        onclick="setPlayerFilter('level','all')">All</button>
           <button class="pf-btn"        data-level="atp"        onclick="setPlayerFilter('level','atp')">ATP</button>
           <button class="pf-btn"        data-level="challenger" onclick="setPlayerFilter('level','challenger')">Challenger</button>
+        </div>
+        <div style="display:flex;flex-wrap:wrap;gap:8px">
+          <span style="font-size:.8rem;color:var(--muted);align-self:center;margin-right:4px">Vs rank</span>
+          <button class="pf-btn active" data-rank="all"  onclick="setPlayerFilter('rank','all')">All</button>
+          <button class="pf-btn"        data-rank="10"   onclick="setPlayerFilter('rank','10')">Top 10</button>
+          <button class="pf-btn"        data-rank="20"   onclick="setPlayerFilter('rank','20')">Top 20</button>
+          <button class="pf-btn"        data-rank="50"   onclick="setPlayerFilter('rank','50')">Top 50</button>
+          <button class="pf-btn"        data-rank="100"  onclick="setPlayerFilter('rank','100')">Top 100</button>
         </div>
       </div>
 
@@ -1828,7 +1836,7 @@ async function submitTip() {
 
 // ── Players ───────────────────────────────────────────────────────────────────
 let playerIndex = null, currentPlayer = null, currentPlayerB = null;
-let pSurface = 'all', pPeriod = 'all', pLevel = 'all', compareMode = false;
+let pSurface = 'all', pPeriod = 'all', pLevel = 'all', pRank = 'all', compareMode = false;
 let pCustomFrom = null, pCustomTo = null;
 
 async function ensurePlayerIndex() {
@@ -1897,9 +1905,12 @@ function setPlayerFilter(type, val) {
     document.getElementById('pDateFrom').style.borderColor = '';
     document.getElementById('pDateTo').style.borderColor = '';
     document.querySelectorAll('[data-period]').forEach(b => b.classList.toggle('active', b.dataset.period === val));
-  } else {
+  } else if (type === 'level') {
     pLevel = val;
     document.querySelectorAll('[data-level]').forEach(b => b.classList.toggle('active', b.dataset.level === val));
+  } else {
+    pRank = val;
+    document.querySelectorAll('[data-rank]').forEach(b => b.classList.toggle('active', b.dataset.rank === val));
   }
   if (currentPlayer) renderPlayer();
 }
@@ -1930,6 +1941,7 @@ function filterMatches(matches) {
     if (pSurface !== 'all' && m.surface !== pSurface) return false;
     if (pLevel === 'challenger' && !isChallenger(m.tournament)) return false;
     if (pLevel === 'atp' && isChallenger(m.tournament)) return false;
+    if (pRank !== 'all' && (typeof m.opp_rank !== 'number' || m.opp_rank > parseInt(pRank))) return false;
     const y = m.date.slice(0, 4), mo = m.date.slice(4, 6), d = m.date.slice(6, 8);
     const date = new Date(`${y}-${mo}-${d}`);
     if (pPeriod === 'custom') {
@@ -2099,6 +2111,41 @@ function renderCompare(el) {
       </div>
       ${rowsHtml}
     </div>
+    ${(() => {
+      const nameB = currentPlayerB.name.toLowerCase();
+      const nameA = currentPlayer.name.toLowerCase();
+      const h2hA = currentPlayer.matches.filter(m => m.opponent.toLowerCase() === nameB);
+      const h2hB = currentPlayerB.matches.filter(m => m.opponent.toLowerCase() === nameA);
+      const allH2H = [...h2hA.map(m => ({...m, who:'A'})), ...h2hB.map(m => ({...m, who:'B'}))]
+        .sort((a,b) => b.date.localeCompare(a.date));
+      const h2hWinsA = h2hA.filter(m => m.result === 'W').length;
+      const h2hWinsB = h2hB.filter(m => m.result === 'W').length;
+      if (!allH2H.length) return '';
+      return `<div style="max-width:700px;margin-top:28px;margin-bottom:28px">
+        <div style="font-size:.82rem;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:12px">
+          Head to Head
+          <span style="font-weight:700;color:var(--green);margin-left:12px">${currentPlayer.name.split(' ').pop()} ${h2hWinsA}</span>
+          <span style="color:var(--muted);margin:0 6px">–</span>
+          <span style="font-weight:700;color:var(--accent)">${h2hWinsB} ${currentPlayerB.name.split(' ').pop()}</span>
+        </div>
+        <div class="match-row head" style="grid-template-columns:90px 1fr 1fr 40px 60px">
+          <div>Date</div><div>Winner</div><div>Tournament</div><div>Srf</div><div>Score</div>
+        </div>
+        ${allH2H.slice(0,20).map(m => {
+          const winner = m.result === 'W' ? (m.who==='A' ? currentPlayer.name : currentPlayerB.name)
+                                          : (m.who==='A' ? currentPlayerB.name : currentPlayer.name);
+          const winnerIsA = winner === currentPlayer.name;
+          const srfColor = m.surface==='Hard'?'#4a9eff':m.surface==='Clay'?'#e07b54':'#5cb85c';
+          return `<div class="match-row" style="grid-template-columns:90px 1fr 1fr 40px 60px">
+            <div style="color:var(--muted);font-size:.75rem">${m.date.slice(0,4)+'-'+m.date.slice(4,6)+'-'+m.date.slice(6,8)}</div>
+            <div style="font-weight:700;color:${winnerIsA?'var(--green)':'var(--accent)'}">${winner.split(' ').pop()}</div>
+            <div style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:.78rem">${m.tournament}</div>
+            <div style="color:${srfColor};font-size:.7rem;font-weight:600">${m.surface.slice(0,2).toUpperCase()}</div>
+            <div style="font-size:.75rem;color:var(--muted)">${m.score||''}</div>
+          </div>`;
+        }).join('')}
+      </div>`;
+    })()}
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-top:32px;max-width:900px">
       <div>
         <div style="font-size:.78rem;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">${currentPlayer.name} — recent</div>
